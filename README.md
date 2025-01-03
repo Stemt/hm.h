@@ -122,7 +122,7 @@ int main(void){
     }
     
     
-    if(!HM_set(&hm, "key", 2)){
+    if(!HM_int_set(&hm, "key", 2)){
         // handle alloc failure (new value was not added to hm)
     }
 
