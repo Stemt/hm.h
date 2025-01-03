@@ -108,6 +108,10 @@ int main(void){
       printf("res: not found\n");
     }
 
+    // removing a key value pair
+    HM_remove(&hm, "test");
+    assert(HM_get(&hm, "test") == NULL);
+
     HM_deinit(&hm);
     return 0;
 }
