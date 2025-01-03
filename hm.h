@@ -54,7 +54,7 @@ void* HM_get(HM* self, const char* key);
 bool HM_set(HM* self, const char* key, void* value);
 HM_Iterator HM_iterate(HM* self, HM_Iterator current);
 
-#define HM_GEN_WRAPPER_DEF(type)\
+#define HM_GEN_WRAPPER_PROTOTYPE(type)\
   bool HM_##type##_init(HM* self, size_t capacity);\
   bool HM_##type##_set(HM* self, const char* key, type value);\
   type* HM_##type##_value_at(HM* self, HM_Iterator it);\

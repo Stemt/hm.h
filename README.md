@@ -11,14 +11,14 @@ This single header library seeks to provide a very simple, quick and easy to use
 > See [](#Disable-Panic-on-Allocation-Failure)
 
 > [!NOTE]
-> Due to the function names that the wrapper generates, it's not possible to generate a wrapper for a pointer using the normal syntax (e.g. :x: `HM_GEN_WRAPPER_DEF(int*)` :x:).
-> Instead, typedef your pointer type and use that instead (e.g. :white_check_mark: `typedef int* int_ptr_t;` and `HM_GEN_WRAPPER_DEF(int_ptr_t)` :white_check_mark:) 
+> Due to the function names that the wrapper generates, it's not possible to generate a wrapper for a pointer using the normal syntax (e.g. :x: `HM_GEN_WRAPPER_PROTOTYPE(int*)` :x:).
+> Instead, typedef your pointer type and use that instead (e.g. :white_check_mark: `typedef int* int_ptr_t;` and `HM_GEN_WRAPPER_PROTOTYPE(int_ptr_t)` :white_check_mark:) 
 
 ```c
 #define HM_IMPLEMENTATION
 #include "hm.h"
 
-HM_GEN_WRAPPER_DEF(int);
+HM_GEN_WRAPPER_PROTOTYPE(int);
 HM_GEN_WRAPPER_IMPLEMENTATION(int);
 
 int main(void){
@@ -28,7 +28,12 @@ int main(void){
     
     HM_set(&hm, "key", 2);
 
-    printf("%d\n", *HM_int_get(&hm, "key"));
+    int* res = HM_int_get(&hm, "test");
+    if(res != NULL){
+      printf("res: %d\n", *res);
+    }else{
+      printf("res: not found\n");
+    }
 
     HM_deinit(&hm);
 }
@@ -49,7 +54,12 @@ int main(void){
     int value = 2;
     HM_set(&hm, "key", &value);
 
-    printf("%d\n", *(int*)HM_get(&hm, "key"));
+    int* res = (int*)HM_get(&hm, "test");
+    if(res != NULL){
+      printf("res: %d\n", *res);
+    }else{
+      printf("res: not found\n");
+    }
 
     HM_deinit(&hm);
 }
@@ -57,11 +67,14 @@ int main(void){
 
 ### Iterating over keys and values
 
+> [!NOTE]
+> Results from the `_at` family of function (e.g. `HM_key_at()` and `HM_value_at()`) only return valid results with an `HM_Iterator` retrieved using `HM_iterate` performed on the same hashmap. Otherwise the return value is undefined.
+
 ```c
 #define HM_IMPLEMENTATION
 #include "hm.h"
 
-HM_GEN_WRAPPER_DEF(int);
+HM_GEN_WRAPPER_PROTOTYPE(int);
 HM_GEN_WRAPPER_IMPLEMENTATION(int);
 
 int main(void){
@@ -74,7 +87,7 @@ int main(void){
   }
 
   for(HM_Iterator i = HM_iterate(&hm, NULL); i != NULL; i = HM_iterate(&hm, i)){
-    printf("key: '%s', value '%d'\n", HM_int_key_at(&hm, i), *HM_int_value_at(&hm, i));
+    printf("key: '%s', value '%d'\n", HM_key_at(&hm, i), *HM_int_value_at(&hm, i));
   }
 
   HM_deinit(&hm);
