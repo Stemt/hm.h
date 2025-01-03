@@ -68,7 +68,7 @@ int main(void){
 ### Iterating over keys and values
 
 > [!NOTE]
-> Results from the `_at` family of function (e.g. `HM_key_at()` and `HM_value_at()`) only return valid results with an `HM_Iterator` retrieved using `HM_iterate` performed on the same hashmap. Otherwise the return value is undefined.
+> Results from the `_at` family of function (e.g. `HM_key_at()` and `HM_value_at()`) only return valid results with an `HM_Iterator` retrieved using `HM_iterate()` performed on the same hashmap. Otherwise the return value is undefined.
 
 ```c
 #define HM_IMPLEMENTATION
