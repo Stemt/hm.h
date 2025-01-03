@@ -58,17 +58,13 @@ HM_Iterator HM_iterate(HM* self, HM_Iterator current);
   bool HM_##type##_init(HM* self, size_t capacity);\
   bool HM_##type##_set(HM* self, const char* key, type value);\
   type* HM_##type##_value_at(HM* self, HM_Iterator it);\
-  const char* HM_##type##_key_at(HM* self, HM_Iterator it);\
   type* HM_##type##_get(HM* self, const char* key);\
 
 #define HM_GEN_WRAPPER_IMPLEMENTATION(type)\
   bool HM_##type##_init(HM* self, size_t capacity){ return HM_init(self, sizeof(type), capacity); }\
   bool HM_##type##_set(HM* self, const char* key, type value){ return HM_set(self, key, &value); }\
   type* HM_##type##_value_at(HM* self, HM_Iterator it){ return HM_value_at(self, it); }\
-  const char* HM_##type##_key_at(HM* self, HM_Iterator it){ return HM_key_at(self, it); }\
   type* HM_##type##_get(HM* self, const char* key){ return HM_get(self, key); }\
-  
-
 
 // 64-bit fnv-1a hash function (http://isthe.com/chongo/tech/comp/fnv/)
 // !! use other version in case of non 64-bit architecture !!

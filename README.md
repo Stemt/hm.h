@@ -33,7 +33,7 @@ int main(void){
 }
 ```
 
-### Type Wrapped API Example
+### Type Wrapped API
 
 To provide better type information, hm.h comes with 2 macros to generate api functions for a specific type.
 `HM_GEN_WRAPPER_PROTOYPE(type)` generates function prototypes/declarations which should ideally be placed inside a header file (.h).
@@ -47,6 +47,34 @@ To provide better type information, hm.h comes with 2 macros to generate api fun
 > HM_GEN_WRAPPER_PROTOTYPE(int_ptr_t);
 > HM_GEN_WRAPPER_IMPLEMENTATION(int_ptr_t);
 > ```
+
+For example for an `int` the macros will generate the following:
+```c
+// HM_GEN_WRAPPER_PROTOTYPE(int);
+bool HM_int_init(HM* self, size_t capacity);\
+bool HM_int_set(HM* self, const char* key, int value);\
+int* HM_int_value_at(HM* self, HM_Iterator it);\
+int* HM_int_get(HM* self, const char* key);\
+
+// HM_GEN_WRAPPER_IMPLEMENTATION(int);
+bool HM_int_init(HM* self, size_t capacity){ 
+    return HM_init(self, sizeof(int), capacity); 
+}
+
+bool HM_int_set(HM* self, const char* key, int value){
+    return HM_set(self, key, &value); 
+}
+
+int* HM_int_value_at(HM* self, HM_Iterator it){ 
+    return HM_value_at(self, it); 
+}
+
+int* HM_int_get(HM* self, const char* key){ 
+    return HM_get(self, key); 
+}
+```
+
+Full example:
 
 ```c
 #define HM_IMPLEMENTATION
