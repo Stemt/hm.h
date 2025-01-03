@@ -12,7 +12,7 @@ This single header library seeks to provide a very simple, quick and easy to use
 
 > [!NOTE]
 > Due to the function names that the wrapper generates, it's not possible to generate a wrapper for a pointer using the normal syntax (e.g. :x: `HM_GEN_WRAPPER_PROTOTYPE(int*)` :x:).
-> Instead, typedef your pointer type and use that instead (e.g. :white_check_mark: `typedef int* int_ptr_t;` and `HM_GEN_WRAPPER_PROTOTYPE(int_ptr_t)` :white_check_mark:) 
+> Instead, you'll have to typedef your pointer type (e.g. :white_check_mark: `typedef int* int_ptr_t;` and `HM_GEN_WRAPPER_PROTOTYPE(int_ptr_t)` :white_check_mark:) 
 
 ```c
 #define HM_IMPLEMENTATION
