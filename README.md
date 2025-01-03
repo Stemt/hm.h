@@ -8,7 +8,7 @@ This single header library seeks to provide a very simple, quick and easy to use
 
 > [!NOTE]
 > By default hm.h uses HM_ASSERT to check if memory allocation has failed, causing an abort if that is the case.
-> See [](#Disable-Panic-on-Allocation-Failure)
+> See [Disable Panic on Allocation Failure](#Disable-Panic-on-Allocation-Failure)
 
 > [!NOTE]
 > Due to the function names that the wrapper generates, it's not possible to generate a wrapper for a pointer using the normal syntax (e.g. :x: `HM_GEN_WRAPPER_PROTOTYPE(int*)` :x:).
