@@ -38,6 +38,7 @@ typedef struct{
   char** keys;
   void* values;
   size_t* next;
+  size_t* prev;
   size_t first;
   size_t last;
   size_t element_size;
@@ -45,14 +46,15 @@ typedef struct{
   size_t capacity;
 } HM;
 
-void HM_deinit(HM* self);
 bool HM_init(HM* self, size_t element_size, size_t capacity);
-bool HM_resize(HM* self, size_t new_capacity);
-const char* HM_key_at(HM* self, HM_Iterator it);
-void* HM_value_at(HM* self, HM_Iterator it);
+void HM_deinit(HM* self);
+bool HM_grow(HM* self);
 void* HM_get(HM* self, const char* key);
 bool HM_set(HM* self, const char* key, void* value);
+void HM_remove(HM* self, const char* key);
 HM_Iterator HM_iterate(HM* self, HM_Iterator current);
+const char* HM_key_at(HM* self, HM_Iterator it);
+void* HM_value_at(HM* self, HM_Iterator it);
 
 #define HM_GEN_WRAPPER_PROTOTYPE(type)\
   bool HM_##type##_init(HM* self, size_t capacity);\
@@ -101,12 +103,11 @@ HM_Iterator HM_iterate(HM* self, HM_Iterator current){
 
 bool HM_set(HM* self, const char* key, void* value){
   if(self->count > self->capacity/2){
-    fprintf(stderr, "resizing: count=%zu, old=%zu, new=%zu\n", self->count, self->capacity, self->capacity*2);
-    if(!HM_resize(self, self->capacity*2)) return false;
+    if(!HM_grow(self)) return false;
   }
   size_t hash = HM_HASH(key) % self->capacity;
   size_t i = hash;
-  while(self->keys[i] != NULL){
+  while(self->keys[i] != NULL && strcmp(self->keys[i], key) != 0){
     i = (i+1) % self->capacity;
     HM_ASSERT(i != hash && "map is full!");
   }
@@ -115,6 +116,7 @@ bool HM_set(HM* self, const char* key, void* value){
     self->first = i;
     self->last = i;
   }else{
+    self->prev[i] = self->last;
     self->next[self->last] = i;
     self->last = i;
   }
@@ -146,36 +148,74 @@ void* HM_get(HM* self, const char* key){
   return self->values + i * self->element_size;
 }
 
-bool HM_resize(HM* self, size_t new_capacity){
-  HM new = {0};
-  new.capacity = new_capacity;
-  new.element_size = self->element_size;
-  new.keys = HM_CALLOC(new_capacity, sizeof(self->keys[0]));
-  HM_CHECK_ALLOC(new.keys);
-  new.values = HM_CALLOC(new_capacity, self->element_size);
-  HM_CHECK_ALLOC(new.values, HM_FREE(new.keys));
-  new.next = HM_CALLOC(new_capacity, sizeof(self->next[0]));
-  HM_CHECK_ALLOC(new.next, HM_FREE(new.keys), HM_FREE(new.next));
+void HM_remove(HM* self, const char* key){
+  size_t hash = HM_HASH(key) % self->capacity;
+  size_t i = hash;
+  while(strcmp(self->keys[i], key) != 0){
+    i = (i+1) % self->capacity;
+    if(i == hash) return;
+  }
+  HM_FREE(self->keys[i]);
+  self->keys[i] = NULL;
+  
+  size_t prev_index = self->prev[i];
+  size_t next_index = self->next[i];
+  
+  if(i == self->first){
+    self->first = next_index;
+  }else if (i == self->last){
+    self->last = prev_index;
+  }else{
+    self->prev[next_index] = prev_index;
+    self->next[prev_index] = next_index;
+  }
+}
+
+bool HM_grow(HM* self){
+  HM new_hm = {0};
+  new_hm.capacity = self->capacity > 0 ? self->capacity * 2 : HM_DEFAULT_CAPACITY;
+  new_hm.element_size = self->element_size;
+  
+  new_hm.keys = HM_CALLOC(new_hm.capacity, sizeof(self->keys[0]));
+  HM_CHECK_ALLOC(new_hm.keys);
+
+  new_hm.values = HM_CALLOC(new_hm.capacity, self->element_size);
+  HM_CHECK_ALLOC(new_hm.values, 
+    HM_FREE(new_hm.keys)
+  );
+
+  new_hm.next = HM_CALLOC(new_hm.capacity, sizeof(self->next[0]));
+  HM_CHECK_ALLOC(new_hm.next, 
+    HM_FREE(new_hm.keys), 
+    HM_FREE(new_hm.values)
+  );
+
+  new_hm.prev = HM_CALLOC(new_hm.capacity, sizeof(self->prev[0]));
+  HM_CHECK_ALLOC(new_hm.prev, 
+    HM_FREE(new_hm.keys), 
+    HM_FREE(new_hm.values), 
+    HM_FREE(new_hm.next)
+  );
 
   // rehash and deinit if hm was previously initialized
   if(self->keys != NULL){
     for(HM_Iterator i = HM_iterate(self, NULL); i != NULL; i = HM_iterate(self, i)){
-      HM_set(&new, HM_key_at(self, i), HM_value_at(self, i));
+      HM_set(&new_hm, HM_key_at(self, i), HM_value_at(self, i));
     }
 
     HM_deinit(self);
   }
 
-  memcpy(self, &new, sizeof(*self));
+  memcpy(self, &new_hm, sizeof(*self));
   return true;
 }
 
 bool HM_init(HM* self, size_t element_size, size_t capacity){
   memset(self, 0, sizeof(*self));
-  if(capacity == 0) capacity = HM_DEFAULT_CAPACITY;
+  self->capacity = capacity;
   self->element_size = element_size;
   self->count = 0;
-  return HM_resize(self, capacity);
+  return HM_grow(self);
 }
 
 void HM_deinit(HM* self){
@@ -185,6 +225,7 @@ void HM_deinit(HM* self){
   HM_FREE(self->keys);
   HM_FREE(self->values);
   HM_FREE(self->next);
+  HM_FREE(self->prev);
 }
 
 #endif // HM_IMPLEMENTATION

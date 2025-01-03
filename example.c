@@ -54,7 +54,16 @@ int main(void){
     }
 
     for(HM_Iterator i = HM_iterate(&hm, NULL); i != NULL; i = HM_iterate(&hm, i)){
-      printf("key: '%s', value '%d'\n", HM_int_key_at(&hm, i), *HM_int_value_at(&hm, i));
+      printf("key: '%s', value '%d'\n", HM_key_at(&hm, i), *HM_int_value_at(&hm, i));
+    }
+    printf("\n");
+
+    HM_remove(&hm, "key-0");
+    HM_remove(&hm, "key-5");
+    HM_remove(&hm, "key-9");
+    
+    for(HM_Iterator i = HM_iterate(&hm, NULL); i != NULL; i = HM_iterate(&hm, i)){
+      printf("key: '%s', value '%d'\n", HM_key_at(&hm, i), *HM_int_value_at(&hm, i));
     }
 
     HM_deinit(&hm);
