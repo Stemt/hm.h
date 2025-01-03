@@ -4,7 +4,36 @@ This single header library seeks to provide a very simple, quick and easy to use
 
 ## Usage
 
-### Type Wrapped API Quick Example
+### Raw API Example
+
+```c
+#define HM_IMPLEMENTATION
+#include "hm.h"
+
+int main(void){
+    HM hm = {0};
+
+    HM_init(&hm, sizeof(int), 10); 
+    
+    int value = 2;
+    HM_set(&hm, "key", &value);
+
+    int* res = (int*)HM_get(&hm, "test");
+    if(res != NULL){
+      printf("res: %d\n", *res);
+    }else{
+      printf("res: not found\n");
+    }
+
+    HM_deinit(&hm);
+}
+```
+
+### Type Wrapped API Example
+
+To provide better type information, hm.h comes with 2 macros to generate api functions for a specific type.
+`HM_GEN_WRAPPER_PROTOYPE(type)` generates function prototypes/declarations which should ideally be placed inside a header file (.h).
+`HM_GEN_WRAPPER_IMPLEMENTATION(type)` generates function implementations (which just call their equivalent in the raw api) and should ideally be placed inside a source file (.c).
 
 > [!NOTE]
 > By default hm.h uses HM_ASSERT to check if memory allocation has failed, causing an abort if that is the case.
@@ -12,7 +41,11 @@ This single header library seeks to provide a very simple, quick and easy to use
 
 > [!NOTE]
 > Due to the function names that the wrapper generates, it's not possible to generate a wrapper for a pointer using the normal syntax (e.g. :x: `HM_GEN_WRAPPER_PROTOTYPE(int*)` :x:).
-> Instead, you'll have to typedef your pointer type (e.g. :white_check_mark: `typedef int* int_ptr_t;` and `HM_GEN_WRAPPER_PROTOTYPE(int_ptr_t)` :white_check_mark:) 
+> Instead, you'll have to typedef your pointer type:
+> ```c
+> typedef int* int_ptr_t;
+> HM_GEN_WRAPPER_PROTOTYPE(int_ptr_t)
+> ```
 
 ```c
 #define HM_IMPLEMENTATION
@@ -38,31 +71,6 @@ int main(void){
     HM_deinit(&hm);
 }
 
-```
-
-### Raw API Quick Example
-
-```c
-#define HM_IMPLEMENTATION
-#include "hm.h"
-
-int main(void){
-    HM hm = {0};
-
-    HM_init(&hm, sizeof(int), 10); 
-    
-    int value = 2;
-    HM_set(&hm, "key", &value);
-
-    int* res = (int*)HM_get(&hm, "test");
-    if(res != NULL){
-      printf("res: %d\n", *res);
-    }else{
-      printf("res: not found\n");
-    }
-
-    HM_deinit(&hm);
-}
 ```
 
 ### Iterating over keys and values
