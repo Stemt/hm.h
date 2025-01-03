@@ -46,14 +46,84 @@ typedef struct{
   size_t capacity;
 } HM;
 
+/**
+ * \brief                 initializes the hashmap
+ * \note                  crashes if allocation failed and HM_DISABLE_ALLOC_PANIC is not defined
+ * \param self:           hashmap handle
+ * \param element_size:   size of the element type the hashmap will store
+ * \param capacity:       initial capacity of the hashmap, note that the hashmap will 
+ *                        always keep half it's capacity empty to limit collisions
+ * \returns               true if initialization was succesful, false if allocation failed **and** 
+ *                        HM_DISABLE_ALLOC_PANIC is defined
+ */
 bool HM_init(HM* self, size_t element_size, size_t capacity);
+
+/**
+ * \brief         frees internal buffers
+ * \param self:   hashmap handle
+ */
 void HM_deinit(HM* self);
+
+/**
+ * \brief         doubles the hashmaps capacity or allocates its buffers if not previously 
+ *                allocated
+ * \note          crashes if allocation failed and HM_DISABLE_ALLOC_PANIC is not defined
+ * \param self:   hashmap handle
+ * \returns       true if allocation was succesful, false if allocation failed **and** 
+ *                HM_DISABLE_ALLOC_PANIC is defined
+ */
 bool HM_grow(HM* self);
+
+/**
+ * \brief         returns pointer to element associated with key if available
+ * \param self:   hashmap handle 
+ * \param key:    key to lookup in hashmap 
+ * \return        NULL if key was not found in hashmap otherwise pointer to element in hashmap
+ */
 void* HM_get(HM* self, const char* key);
+
+/**
+ * \brief         inserts a new key value pair into the hashmap
+ * \note          calls HM_grow() if element count > capacity, thus will crash on allocation 
+ *                failure if HM_DISABLE_ALLOC_PANIC is not defined
+ * \param self:   hashmap handle 
+ * \param key:    key to lookup in hashmap 
+ * \returns       true if insertion was succesful, false if an allocation failed **and** 
+ *                HM_DISABLE_ALLOC_PANIC is defined
+ */
 bool HM_set(HM* self, const char* key, void* value);
+
+/**
+ * \brief         removes a key value pair from the hashmap
+ * \param self:   hashmap handle 
+ * \param key:    key to remove from hashmap
+ */
 void HM_remove(HM* self, const char* key);
+
+/**
+ * \brief           returns HM_Iterator based on give HM_Iterator passed as argument
+ * \param self:     hashmap handle 
+ * \param current:  NULL to get a HM_Iterator for the first element or previously returned 
+ *                  HM_Iterator for the next element
+ * \return          HM_Iterator for the nest element or NULL if the given HM_Iterator is for 
+ *                  the last element
+ */
 HM_Iterator HM_iterate(HM* self, HM_Iterator current);
+
+/**
+ * \brief         returns key for corresponding HM_Iterator
+ * \param self:   hashmap handle 
+ * \param it:     HM_Iterator by which to get the key
+ * \return        pointer to the key string
+ */
 const char* HM_key_at(HM* self, HM_Iterator it);
+
+/**
+ * \brief         returns pointer to value for corresponding HM_Iterator
+ * \param self:   hashmap handle 
+ * \param it:     HM_Iterator by which to get the value
+ * \return        pointer to the value inside the hashmap
+ */
 void* HM_value_at(HM* self, HM_Iterator it);
 
 #define HM_GEN_WRAPPER_PROTOTYPE(type)\
