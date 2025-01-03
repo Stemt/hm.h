@@ -38,6 +38,7 @@ int main(void){
     assert(HM_get(&hm, "test") == NULL);
 
     HM_deinit(&hm);
+    return 0;
 }
 ```
 
@@ -108,6 +109,7 @@ int main(void){
     }
 
     HM_deinit(&hm);
+    return 0;
 }
 
 ```
@@ -125,19 +127,19 @@ HM_GEN_WRAPPER_PROTOTYPE(int);
 HM_GEN_WRAPPER_IMPLEMENTATION(int);
 
 int main(void){
-  HM_int_init(&hm, 0);
+    HM_int_init(&hm, 0);
+    
+    for(int i = 0; i < 10; ++i){
+        char key[1024] = {0};
+        snprintf(key, sizeof(key)-1, "key-%d", i);
+        HM_int_set(&hm, key, i);
+    }
 
-  for(int i = 0; i < 10; ++i){
-    char key[1024] = {0};
-    snprintf(key, sizeof(key)-1, "key-%d", i);
-    HM_int_set(&hm, key, i);
-  }
+    for(HM_Iterator i = HM_iterate(&hm, NULL); i != NULL; i = HM_iterate(&hm, i)){
+        printf("key: '%s', value '%d'\n", HM_key_at(&hm, i), *HM_int_value_at(&hm, i));
+    }
 
-  for(HM_Iterator i = HM_iterate(&hm, NULL); i != NULL; i = HM_iterate(&hm, i)){
-    printf("key: '%s', value '%d'\n", HM_key_at(&hm, i), *HM_int_value_at(&hm, i));
-  }
-
-  HM_deinit(&hm);
+    HM_deinit(&hm);
     return 0;
 }
 ```
@@ -180,7 +182,6 @@ int main(void){
     }
 
     HM_deinit(&hm);
-
     return 0;
 }
 ```
