@@ -44,7 +44,8 @@ To provide better type information, hm.h comes with 2 macros to generate api fun
 > Instead, you'll have to typedef your pointer type:
 > ```c
 > typedef int* int_ptr_t;
-> HM_GEN_WRAPPER_PROTOTYPE(int_ptr_t)
+> HM_GEN_WRAPPER_PROTOTYPE(int_ptr_t);
+> HM_GEN_WRAPPER_IMPLEMENTATION(int_ptr_t);
 > ```
 
 ```c
