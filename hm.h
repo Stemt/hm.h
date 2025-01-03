@@ -53,7 +53,7 @@
 #ifdef HM_DISABLE_ALLOC_PANIC
 #define HM_CHECK_ALLOC(ptr, ...) if((ptr) == NULL) return (__VA_ARGS__ ,false)
 #else
-#define HM_CHECK_ALLOC(ptr, ...) HM_ASSERT(ptr != NULL)
+#define HM_CHECK_ALLOC(ptr, ...) HM_ASSERT(ptr != NULL && "allocation failure")
 #endif
 
 typedef const size_t* HM_Iterator;
