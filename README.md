@@ -111,6 +111,9 @@ And most importantly remember to actually handle allocation failures:
 #define HM_IMPLEMENTATION
 #include "hm.h"
 
+HM_GEN_WRAPPER_PROTOTYPE(int);
+HM_GEN_WRAPPER_IMPLEMENTATION(int);
+
 int main(void){
     HM hm = {0};
     
