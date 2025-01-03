@@ -98,7 +98,7 @@ int main(void){
     HM_int_init(&hm, 10); 
     
     // inserting a key value pair
-    HM_set(&hm, "key", 2);
+    HM_int_set(&hm, "key", 2);
 
     // retrieving value by key
     int* res = HM_int_get(&hm, "test");
