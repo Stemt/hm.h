@@ -1,6 +1,8 @@
 # hm.h
 
 This single header library seeks to provide a very simple, quick and easy to use hashmap implementation.
+This library does not aim to be the fastest nor most memory efficient hashmap implementation. 
+It rather aims to be as easy to use and minimalist as possible, while ramaining useful to more advanced users.
 
 ## Usage
 
@@ -16,18 +18,24 @@ This single header library seeks to provide a very simple, quick and easy to use
 
 int main(void){
     HM hm = {0};
-
+    
     HM_init(&hm, sizeof(int), 10); 
     
+    // inserting a key value pair
     int value = 2;
     HM_set(&hm, "key", &value);
 
+    // retrieving value by key
     int* res = (int*)HM_get(&hm, "test");
     if(res != NULL){
       printf("res: %d\n", *res);
     }else{
       printf("res: not found\n");
     }
+    
+    // removing a key value pair
+    HM_remove(&hm, "test");
+    assert(HM_get(&hm, "test") == NULL);
 
     HM_deinit(&hm);
 }
@@ -35,7 +43,7 @@ int main(void){
 
 ### Type Wrapped API
 
-To provide better type information, hm.h comes with 2 macros to generate api functions for a specific type.
+To provide better type information, hm.h comes with 2 macros to generate api functions for specific data types.
 `HM_GEN_WRAPPER_PROTOYPE(type)` generates function prototypes/declarations which should ideally be placed inside a header file (.h).
 `HM_GEN_WRAPPER_IMPLEMENTATION(type)` generates function implementations (which just call their equivalent in the raw api) and should ideally be placed inside a source file (.c).
 
@@ -88,8 +96,10 @@ int main(void){
 
     HM_int_init(&hm, 10); 
     
+    // inserting a key value pair
     HM_set(&hm, "key", 2);
 
+    // retrieving value by key
     int* res = HM_int_get(&hm, "test");
     if(res != NULL){
       printf("res: %d\n", *res);
@@ -157,7 +167,6 @@ int main(void){
     if(!HM_int_init(&hm, 10)){
         // handle alloc failure (hm is not initialized)
     }
-    
     
     if(!HM_int_set(&hm, "key", 2)){
         // handle alloc failure (new value was not added to hm)

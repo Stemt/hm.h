@@ -23,6 +23,9 @@ int main(void){
     }else{
       printf("res: not found\n");
     }
+    
+    HM_remove(&hm, "test");
+    assert(HM_get(&hm, "test") == NULL);
 
     HM_deinit(&hm);
   }
@@ -39,6 +42,9 @@ int main(void){
     }else{
       printf("res: not found\n");
     }
+    
+    HM_remove(&hm, "test");
+    assert(HM_get(&hm, "test") == NULL);
 
     HM_deinit(&hm);
   }

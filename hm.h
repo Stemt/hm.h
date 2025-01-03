@@ -150,8 +150,9 @@ size_t HM_default_hash(const char *str);
 #define HM_FNV_BASIS 0xcbf29ce484222325
 size_t HM_default_hash(const char *str) {
     size_t hash = HM_FNV_BASIS;
-    while (*str)
-        hash = (hash ^ *str++) * HM_FNV_PRIME;
+    while (*str){
+      hash = (hash ^ *str++) * HM_FNV_PRIME;
+    }
     return hash;
 }
 
@@ -162,6 +163,7 @@ size_t HM_default_hash(const char *str) {
 #ifdef HM_IMPLEMENTATION
 
 HM_Iterator HM_iterate(HM* self, HM_Iterator current){
+  if(self->count == 0) return NULL;
   if(current == NULL){
     return &self->first;
   }else if(*current == self->last){
@@ -175,6 +177,7 @@ bool HM_set(HM* self, const char* key, void* value){
   if(self->count > self->capacity/2){
     if(!HM_grow(self)) return false;
   }
+
   size_t hash = HM_HASH(key) % self->capacity;
   size_t i = hash;
   while(self->keys[i] != NULL && strcmp(self->keys[i], key) != 0){
@@ -195,7 +198,9 @@ bool HM_set(HM* self, const char* key, void* value){
   self->keys[i] = HM_CALLOC(strlen(key)+1, sizeof(char));
   HM_CHECK_ALLOC(self->keys[i]);
   strcpy(self->keys[i], key);
+
   memcpy(self->values + i * self->element_size, value, self->element_size);
+
   self->count++;
   return true;
 }
@@ -209,22 +214,28 @@ void* HM_value_at(HM* self, HM_Iterator it){
 }
 
 void* HM_get(HM* self, const char* key){
+  if(self->count == 0) return NULL;
+
   size_t hash = HM_HASH(key) % self->capacity;
   size_t i = hash;
-  while(strcmp(self->keys[i], key) != 0){
+  while(self->keys[i] == NULL || strcmp(self->keys[i], key) != 0){
     i = (i+1) % self->capacity;
     if(i == hash) return NULL;
   }
+
   return self->values + i * self->element_size;
 }
 
 void HM_remove(HM* self, const char* key){
+  if(self->count == 0) return;
+
   size_t hash = HM_HASH(key) % self->capacity;
   size_t i = hash;
-  while(strcmp(self->keys[i], key) != 0){
+  while(self->keys[i] == NULL || strcmp(self->keys[i], key) != 0){
     i = (i+1) % self->capacity;
     if(i == hash) return;
   }
+
   HM_FREE(self->keys[i]);
   self->keys[i] = NULL;
   
@@ -239,6 +250,8 @@ void HM_remove(HM* self, const char* key){
     self->prev[next_index] = prev_index;
     self->next[prev_index] = next_index;
   }
+
+  self->count--;
 }
 
 bool HM_grow(HM* self){
@@ -284,7 +297,6 @@ bool HM_init(HM* self, size_t element_size, size_t capacity){
   memset(self, 0, sizeof(*self));
   self->capacity = capacity;
   self->element_size = element_size;
-  self->count = 0;
   return HM_grow(self);
 }
 
