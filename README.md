@@ -123,7 +123,12 @@ int main(void){
         // handle alloc failure (new value was not added to hm)
     }
 
-    printf("%d\n", *HM_int_get(&hm, "key"));
+    int* res = HM_int_get(&hm, "test");
+    if(res != NULL){
+      printf("res: %d\n", *res);
+    }else{
+      printf("res: not found\n");
+    }
 
     HM_deinit(&hm);
 
