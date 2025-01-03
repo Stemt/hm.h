@@ -6,6 +6,10 @@ This single header library seeks to provide a very simple, quick and easy to use
 
 ### Raw API Example
 
+> [!NOTE]
+> By default hm.h uses HM_ASSERT to check if memory allocation has failed, causing an abort if that is the case.
+> See [Disable Panic on Allocation Failure](#Disable-Panic-on-Allocation-Failure) if you want to change that behavior.
+
 ```c
 #define HM_IMPLEMENTATION
 #include "hm.h"
@@ -34,10 +38,6 @@ int main(void){
 To provide better type information, hm.h comes with 2 macros to generate api functions for a specific type.
 `HM_GEN_WRAPPER_PROTOYPE(type)` generates function prototypes/declarations which should ideally be placed inside a header file (.h).
 `HM_GEN_WRAPPER_IMPLEMENTATION(type)` generates function implementations (which just call their equivalent in the raw api) and should ideally be placed inside a source file (.c).
-
-> [!NOTE]
-> By default hm.h uses HM_ASSERT to check if memory allocation has failed, causing an abort if that is the case.
-> See [Disable Panic on Allocation Failure](#Disable-Panic-on-Allocation-Failure) if you want to change that behavior.
 
 > [!NOTE]
 > Due to the function names that the wrapper generates, it's not possible to generate a wrapper for a pointer using the normal syntax (e.g. :x: `HM_GEN_WRAPPER_PROTOTYPE(int*)` :x:).
