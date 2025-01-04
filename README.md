@@ -198,5 +198,5 @@ Tests make use of [utest.h by sheredom](https://github.com/sheredom/utest.h).
 To run them simply run:
 
 ```
-make tests
+make test
 ```
