@@ -180,7 +180,7 @@ size_t HM_default_hash(const char *str);
 size_t HM_default_hash(const char *str) {
     size_t hash = HM_FNV_BASIS;
     while (*str){
-      hash = (hash ^ *str++) * HM_FNV_PRIME;
+      hash = ((unsigned char)hash ^ *str++) * HM_FNV_PRIME;
     }
     return hash;
 }
