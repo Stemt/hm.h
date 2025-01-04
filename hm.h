@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #ifndef HM_CALLOC
 #define HM_CALLOC(n, s) calloc(n, s)
@@ -47,13 +48,20 @@
 #define HM_ASSERT(expr) assert(expr)
 #endif
 
+#ifndef HM_LOG_ERROR
+#define HM_LOG_ERROR(fmt, ...) fprintf(stderr, fmt, __VA_ARGS__);
+#endif
+
 // by default HM will panic if an allocation (HM_CALLOC) returns NULL.
 // by defining HM_DISABLE_ALLOC_PANIC, HM_init() and HM_set() will 
 // return false in case of allocation failure
 #ifdef HM_DISABLE_ALLOC_PANIC
 #define HM_CHECK_ALLOC(ptr, ...) if((ptr) == NULL){ __VA_ARGS__; return false; }
 #else
-#define HM_CHECK_ALLOC(ptr, ...) HM_ASSERT(ptr != NULL && "allocation failure")
+#define HM_CHECK_ALLOC(ptr, ...) if(ptr == NULL){\
+  HM_LOG_ERROR("hm.h: allocation failure, define 'HM_DISABLE_ALLOC_PANIC' if crashing is undesired in this case.\n");\
+  abort();\
+}
 #endif
 
 typedef const size_t* HM_Iterator;
@@ -180,7 +188,7 @@ size_t HM_default_hash(const char *str);
 size_t HM_default_hash(const char *str) {
     size_t hash = HM_FNV_BASIS;
     while (*str){
-      hash = ((unsigned char)hash ^ *str++) * HM_FNV_PRIME;
+      hash = (hash ^ (unsigned char)(*str++)) * HM_FNV_PRIME;
     }
     return hash;
 }
@@ -286,6 +294,7 @@ void HM_remove(HM* self, const char* key){
 bool HM_allocate(HM* self, size_t element_size, size_t capacity){
   self->capacity = capacity;
   self->element_size = element_size;
+
   
   self->keys = HM_CALLOC(capacity, sizeof(self->keys[0]));
   HM_CHECK_ALLOC(self->keys);

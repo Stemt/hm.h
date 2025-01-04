@@ -1,8 +1,8 @@
 all: example test
 
-example:
-	gcc -ggdb -std=c99 -Wall -Wextra -o example example.c
+example: example.c
+	gcc -ggdb -std=c99 -Wall -Wextra -o example_app example.c
 
-test:
-	gcc -ggdb -Wall -Wextra -o testexec tests/test.c -I.
-	./testexec
+test: tests/test.c
+	gcc -ggdb -Wall -Wextra -o test_app tests/test.c -I.
+	./test_app

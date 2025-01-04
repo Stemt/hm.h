@@ -11,7 +11,7 @@ It rather aims to be as easy to use and minimalist as possible, while ramaining 
 ### Raw API Example
 
 > [!NOTE]
-> By default hm.h uses HM_ASSERT to check if memory allocation has failed, causing an abort if that is the case.
+> By default hm.h panics if memory allocation has failed and causes an abort if that is the case.
 > See [Disable Panic on Allocation Failure](#Disable-Panic-on-Allocation-Failure) if you want to change that behavior.
 
 ```c
