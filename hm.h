@@ -322,7 +322,6 @@ bool HM_grow(HM* self){
   for(HM_Iterator i = HM_iterate(self, NULL); i != NULL; i = HM_iterate(self, i)){
     HM_set(&new_hm, HM_key_at(self, i), HM_value_at(self, i));
   }
-
   HM_deinit(self);
 
   memcpy(self, &new_hm, sizeof(*self));
