@@ -29,6 +29,18 @@ UTEST(HM_Basic, removal){
   ASSERT_EQ(HM_get(&hm, "test"), NULL);
 }
 
+UTEST(HM_Basic, resize){
+  HM hm = {0};
+  ASSERT_TRUE(HM_int_init(&hm, 2));
+  ASSERT_EQ(hm.capacity, 2ULL);
+
+  ASSERT_TRUE(HM_int_set(&hm, "key-1", 1));
+  ASSERT_TRUE(HM_int_set(&hm, "key-2", 2));
+  ASSERT_TRUE(HM_int_set(&hm, "key-3", 3));
+
+  ASSERT_GE(hm.capacity, 3ULL);
+}
+
 UTEST(HM_Iteration, iterate){
   HM hm = {0};
   HM_int_init(&hm, 0);
