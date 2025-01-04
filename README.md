@@ -153,7 +153,7 @@ int main(void){
 ### Using Arbitrary Data as Key
 
 To allow other data types to be used as keys hm.h provides the `HM_VAR_AS_KEY(var)` macro.
-This macro first allocates a buffer of size `sizeof(var)+1`.
+This macro first allocates a buffer of size `sizeof(var)+1` using HM_ALLOCA.
 It then zeroes this buffer with `memset()` and copies the var into it using `memcpy`.
 
 This results in an essentially a valid cstring which can be used as a key.
