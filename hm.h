@@ -47,8 +47,8 @@
 #define HM_ASSERT(expr) assert(expr)
 #endif
 
-// by default HM will panic if an allocation (calloc) returns NULL
-// by defining HM_DISABLE_ALLOC_PANIC HM_init() and HM_set() will 
+// by default HM will panic if an allocation (HM_CALLOC) returns NULL.
+// by defining HM_DISABLE_ALLOC_PANIC, HM_init() and HM_set() will 
 // return false in case of allocation failure
 #ifdef HM_DISABLE_ALLOC_PANIC
 #define HM_CHECK_ALLOC(ptr, ...) if((ptr) == NULL) return (__VA_ARGS__ ,false)
@@ -162,14 +162,19 @@ void* HM_value_at(HM* self, HM_Iterator it);
   type* HM_##type##_value_at(HM* self, HM_Iterator it){ return HM_value_at(self, it); }\
   type* HM_##type##_get(HM* self, const char* key){ return HM_get(self, key); }\
 
-// 64-bit fnv-1a hash function (http://isthe.com/chongo/tech/comp/fnv/)
-// !! use other version in case of non 64-bit architecture !!
+
 #ifndef HM_HASH
+#if INTPTR_MAX != INT64_MAX
+#error "HM: default hash algo only supports 64-bit, please define custom HM_HASH(cstr)"
+#endif
 
 size_t HM_default_hash(const char *str);
 #define HM_HASH(str) HM_default_hash(str)
 
 #ifdef HM_IMPLEMENTATION
+
+// 64-bit fnv-1a hash function (http://isthe.com/chongo/tech/comp/fnv/)
+// !! use other version in case of non 64-bit architecture !!
 #define HM_FNV_PRIME 0x00000100000001b3
 #define HM_FNV_BASIS 0xcbf29ce484222325
 size_t HM_default_hash(const char *str) {
