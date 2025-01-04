@@ -1,5 +1,7 @@
 # hm.h
 
+[![Makefile CI](https://github.com/Stemt/hm.h/actions/workflows/makefile.yml/badge.svg?branch=main)](https://github.com/Stemt/hm.h/actions/workflows/makefile.yml)
+
 This single header library seeks to provide a very simple, quick and easy to use hashmap implementation.
 This library does not aim to be the fastest nor most memory efficient hashmap implementation. 
 It rather aims to be as easy to use and minimalist as possible, while ramaining useful to more advanced users.
