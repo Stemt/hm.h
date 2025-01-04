@@ -49,7 +49,7 @@
 #endif
 
 #ifndef HM_LOG_ERROR
-#define HM_LOG_ERROR(fmt, ...) fprintf(stderr, fmt, __VA_ARGS__);
+#define HM_LOG_ERROR(...) fprintf(stderr, __VA_ARGS__)
 #endif
 
 // by default HM will panic if an allocation (HM_CALLOC) returns NULL.
