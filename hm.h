@@ -51,7 +51,7 @@
 // by defining HM_DISABLE_ALLOC_PANIC, HM_init() and HM_set() will 
 // return false in case of allocation failure
 #ifdef HM_DISABLE_ALLOC_PANIC
-#define HM_CHECK_ALLOC(ptr, ...) if((ptr) == NULL) return (__VA_ARGS__ ,false)
+#define HM_CHECK_ALLOC(ptr, ...) if((ptr) == NULL){ __VA_ARGS__; return false; }
 #else
 #define HM_CHECK_ALLOC(ptr, ...) HM_ASSERT(ptr != NULL && "allocation failure")
 #endif
@@ -283,40 +283,47 @@ void HM_remove(HM* self, const char* key){
   self->count--;
 }
 
+bool HM_allocate(HM* self, size_t element_size, size_t capacity){
+  self->capacity = capacity;
+  self->element_size = element_size;
+  
+  self->keys = HM_CALLOC(capacity, sizeof(self->keys[0]));
+  HM_CHECK_ALLOC(self->keys);
+
+  self->values = HM_CALLOC(capacity, element_size);
+  HM_CHECK_ALLOC(self->values, 
+    HM_FREE(self->keys);
+  );
+
+  self->next = HM_CALLOC(capacity, sizeof(self->next[0]));
+  HM_CHECK_ALLOC(self->next, 
+    HM_FREE(self->keys); 
+    HM_FREE(self->values);
+  );
+
+  self->prev = HM_CALLOC(capacity, sizeof(self->prev[0]));
+  HM_CHECK_ALLOC(self->prev, 
+    HM_FREE(self->keys); 
+    HM_FREE(self->values); 
+    HM_FREE(self->next);
+  );
+
+  return true;
+}
+
 bool HM_grow(HM* self){
   HM new_hm = {0};
-  new_hm.capacity = self->capacity > 0 ? self->capacity * 2 : HM_DEFAULT_CAPACITY;
-  new_hm.element_size = self->element_size;
   
-  new_hm.keys = HM_CALLOC(new_hm.capacity, sizeof(self->keys[0]));
-  HM_CHECK_ALLOC(new_hm.keys);
-
-  new_hm.values = HM_CALLOC(new_hm.capacity, self->element_size);
-  HM_CHECK_ALLOC(new_hm.values, 
-    HM_FREE(new_hm.keys)
-  );
-
-  new_hm.next = HM_CALLOC(new_hm.capacity, sizeof(self->next[0]));
-  HM_CHECK_ALLOC(new_hm.next, 
-    HM_FREE(new_hm.keys), 
-    HM_FREE(new_hm.values)
-  );
-
-  new_hm.prev = HM_CALLOC(new_hm.capacity, sizeof(self->prev[0]));
-  HM_CHECK_ALLOC(new_hm.prev, 
-    HM_FREE(new_hm.keys), 
-    HM_FREE(new_hm.values), 
-    HM_FREE(new_hm.next)
-  );
-
-  // rehash and deinit if hm was previously initialized
-  if(self->keys != NULL){
-    for(HM_Iterator i = HM_iterate(self, NULL); i != NULL; i = HM_iterate(self, i)){
-      HM_set(&new_hm, HM_key_at(self, i), HM_value_at(self, i));
-    }
-
-    HM_deinit(self);
+  if(!HM_allocate(&new_hm, self->capacity * 2, self->element_size)){
+    return false;
   }
+
+  // rehash and deinit
+  for(HM_Iterator i = HM_iterate(self, NULL); i != NULL; i = HM_iterate(self, i)){
+    HM_set(&new_hm, HM_key_at(self, i), HM_value_at(self, i));
+  }
+
+  HM_deinit(self);
 
   memcpy(self, &new_hm, sizeof(*self));
   return true;
@@ -324,9 +331,7 @@ bool HM_grow(HM* self){
 
 bool HM_init(HM* self, size_t element_size, size_t capacity){
   memset(self, 0, sizeof(*self));
-  self->capacity = capacity;
-  self->element_size = element_size;
-  return HM_grow(self);
+  return HM_allocate(self, element_size, capacity > 0 ? capacity : HM_DEFAULT_CAPACITY);
 }
 
 void HM_deinit(HM* self){
