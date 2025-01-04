@@ -28,12 +28,15 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <stdbool.h>
-#include <stdio.h>
 
 #ifndef HM_CALLOC
 #define HM_CALLOC(n, s) calloc(n, s)
+#endif
+
+#ifndef HM_ALLOCA
+#include <alloca.h>
+#define HM_ALLOCA(s) alloca(s)
 #endif
 
 #ifndef HM_FREE
@@ -45,10 +48,12 @@
 #endif
 
 #ifndef HM_ASSERT
+#include <assert.h>
 #define HM_ASSERT(expr) assert(expr)
 #endif
 
 #ifndef HM_LOG_ERROR
+#include <stdio.h>
 #define HM_LOG_ERROR(...) fprintf(stderr, __VA_ARGS__)
 #endif
 
@@ -62,6 +67,10 @@
   HM_LOG_ERROR("hm.h: allocation failure, define 'HM_DISABLE_ALLOC_PANIC' if crashing is undesired in this case.\n");\
   abort();\
 }
+#endif
+
+#ifndef HM_VAR_AS_KEY
+#define HM_VAR_AS_KEY(var) memcpy(memset(HM_ALLOCA(sizeof(var)+1), 0, sizeof(var)+1), &(var), sizeof(var))
 #endif
 
 typedef const size_t* HM_Iterator;
