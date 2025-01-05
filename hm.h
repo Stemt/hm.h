@@ -28,6 +28,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdbool.h>
 
 #ifndef HM_CALLOC
@@ -195,11 +196,11 @@ size_t HM_default_hash(const char *str);
 #define HM_FNV_PRIME 0x00000100000001b3
 #define HM_FNV_BASIS 0xcbf29ce484222325
 size_t HM_default_hash(const char *str) {
-    size_t hash = HM_FNV_BASIS;
+    uint64_t hash = HM_FNV_BASIS;
     while (*str){
       hash = (hash ^ (unsigned char)(*str++)) * HM_FNV_PRIME;
     }
-    return hash;
+    return hash ^ hash>>32;
 }
 
 #endif //HM_IMPLEMENTATION
@@ -332,7 +333,7 @@ bool HM_allocate(HM* self, size_t element_size, size_t capacity){
 bool HM_grow(HM* self){
   HM new_hm = {0};
   
-  if(!HM_allocate(&new_hm, self->capacity * 2, self->element_size)){
+  if(!HM_allocate(&new_hm, self->element_size, self->capacity * 2)){
     return false;
   }
 
