@@ -231,14 +231,17 @@ bool HM_set(HM* self, const char* key, void* value){
     i = (i+1) % self->capacity;
     HM_ASSERT(i != hash && "map is full!");
   }
-
-  if(self->count == 0){
-    self->first = i;
-    self->last = i;
-  }else{
-    self->prev[i] = self->last;
-    self->next[self->last] = i;
-    self->last = i;
+  
+  // links should only be updated when new key is inserted
+  if(self->keys[i] == NULL){
+    if(self->count == 0){
+      self->first = i;
+      self->last = i;
+    }else{
+      self->prev[i] = self->last;
+      self->next[self->last] = i;
+      self->last = i;
+    }
   }
   
   // TODO use internal buffer instead of seperate heap buffer for keys
