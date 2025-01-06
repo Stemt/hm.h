@@ -1,3 +1,4 @@
+#include <stdio.h>
 #define HM_IMPLEMENTATION
 #define HM_DISABLE_ALLOC_PANIC
 #include "hm.h"
@@ -56,17 +57,6 @@ UTEST(HM_Iteration, iterate){
     count++;
   }
   ASSERT_EQ(count, 10);
-}
-
-UTEST(HM_Basic, int_as_key){
-  HM hm = {0};
-  ASSERT_TRUE(HM_int_init(&hm, 0));
-  
-  int key = 2;
-  ASSERT_TRUE(HM_int_set(&hm, HM_VAR_AS_KEY(key), 2));
-  
-  HM_remove(&hm, HM_VAR_AS_KEY(key));
-  ASSERT_EQ(HM_get(&hm, HM_VAR_AS_KEY(key)), NULL);
 }
 
 UTEST(HM_Iteration, remove_first){

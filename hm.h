@@ -70,10 +70,6 @@
 }
 #endif
 
-#ifndef HM_VAR_AS_KEY
-#define HM_VAR_AS_KEY(var) memcpy(memset(HM_ALLOCA(sizeof(var)+1), 0, sizeof(var)+1), &(var), sizeof(var))
-#endif
-
 typedef const size_t* HM_Iterator;
 
 typedef struct{

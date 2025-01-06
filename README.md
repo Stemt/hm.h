@@ -150,25 +150,6 @@ int main(void){
 }
 ```
 
-### Using Arbitrary Data as Key
-
-To allow other data types to be used as keys hm.h provides the `HM_VAR_AS_KEY(var)` macro.
-This macro first allocates a buffer of size `sizeof(var)+1` using HM_ALLOCA.
-It then zeroes this buffer with `memset()` and copies the var into it using `memcpy`.
-
-This results in an essentially a valid cstring which can be used as a key.
-
-> [!NOTE]
-> `HM_VAR_AS_KEY(var)` requires the actual variable that contains your data, 
-> not a pointer pointing to your data.
-
-Its usage may look like the following:
-
-```c
-    int key = 5;
-    HM_int_set(&hm, HM_VAR_AS_KEY(key), 2);
-```
-
 ### Disable Panic on Allocation Failure
 
 For convenience hm.h will crash your program so that you don't have to check the results of the `HM_init()` and `HM_set()` functions. 
