@@ -42,6 +42,43 @@ UTEST(HM_Basic, resize){
   ASSERT_GE(hm.capacity, 3ULL);
 }
 
+UTEST(HM_Basic_key_with_length, insertion){
+  HM hm = {0};
+  ASSERT_TRUE(HM_init(&hm, sizeof(int), 0));
+  
+  int value = 2;
+  ASSERT_TRUE(HM_kwl_set(&hm, &value, sizeof(value), &value));
+  
+  ASSERT_NE(HM_kwl_get(&hm, &value, sizeof(value)), NULL);
+  ASSERT_EQ(*(int*)HM_kwl_get(&hm, &value, sizeof(value)), 2);
+}
+
+UTEST(HM_Basic_key_with_length, removal){
+  HM hm = {0};
+  ASSERT_TRUE(HM_init(&hm, sizeof(int), 0));
+  
+  int value = 2;
+  ASSERT_TRUE(HM_kwl_set(&hm, &value, sizeof(value), &value));
+  
+  ASSERT_NE(HM_kwl_get(&hm, &value, sizeof(value)), NULL);
+  ASSERT_EQ(*(int*)HM_kwl_get(&hm, &value, sizeof(value)), 2);
+  
+  HM_kwl_remove(&hm, &value, sizeof(int));
+  ASSERT_EQ(HM_kwl_get(&hm, &value, sizeof(value)), NULL);
+}
+
+UTEST(HM_Basic_key_with_length, resize){
+  HM hm = {0};
+  ASSERT_TRUE(HM_int_init(&hm, 2));
+  ASSERT_EQ(hm.capacity, 2ULL);
+
+  ASSERT_TRUE(HM_int_kwl_set(&hm, &(int){1}, sizeof(int), 1));
+  ASSERT_TRUE(HM_int_kwl_set(&hm, &(int){2}, sizeof(int), 2));
+  ASSERT_TRUE(HM_int_kwl_set(&hm, &(int){3}, sizeof(int), 3));
+
+  ASSERT_GE(hm.capacity, 3ULL);
+}
+
 UTEST(HM_Iteration, iterate){
   HM hm = {0};
   HM_int_init(&hm, 0);
@@ -54,6 +91,25 @@ UTEST(HM_Iteration, iterate){
 
   int count = 0;
   for(HM_Iterator i = HM_iterate(&hm, NULL); i != NULL; i = HM_iterate(&hm, i)){
+    ASSERT_NE(i, NULL);
+    count++;
+  }
+  ASSERT_EQ(count, 10);
+}
+
+UTEST(HM_Iteration, iterate_key_length){
+  HM hm = {0};
+  HM_int_init(&hm, 0);
+
+  for(int i = 0; i < 10; ++i){
+    HM_int_kwl_set(&hm, &i, sizeof(int), i);
+  }
+
+  int count = 0;
+  for(HM_Iterator i = HM_iterate(&hm, NULL); i != NULL; i = HM_iterate(&hm, i)){
+    ASSERT_NE(i, NULL);
+    ASSERT_NE(HM_key_len_at(&hm, i), NULL);
+    ASSERT_EQ(*HM_key_len_at(&hm, i), sizeof(int));
     count++;
   }
   ASSERT_EQ(count, 10);

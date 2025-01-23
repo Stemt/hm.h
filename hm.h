@@ -28,16 +28,10 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdint.h>
 #include <stdbool.h>
 
 #ifndef HM_CALLOC
 #define HM_CALLOC(n, s) calloc(n, s)
-#endif
-
-#ifndef HM_ALLOCA
-#include <alloca.h>
-#define HM_ALLOCA(s) alloca(s)
 #endif
 
 #ifndef HM_FREE
@@ -73,10 +67,18 @@
 typedef const size_t* HM_Iterator;
 
 typedef struct{
-  char** keys;
+  char* key;
+  size_t key_len;
+  size_t next;
+  size_t prev;
+} HM_Entry;
+
+typedef struct{
+  //char** keys;
   void* values;
-  size_t* next;
-  size_t* prev;
+  //size_t* next;
+  //size_t* prev;
+  HM_Entry* entries;
   size_t first;
   size_t last;
   size_t element_size;
@@ -126,10 +128,24 @@ void* HM_get(HM* self, const char* key);
  *                failure if HM_DISABLE_ALLOC_PANIC is not defined
  * \param self:   hashmap handle 
  * \param key:    key to lookup in hashmap 
+ * \param value:  pointer to value to be inserted 
  * \returns       true if insertion was succesful, false if an allocation failed **and** 
  *                HM_DISABLE_ALLOC_PANIC is defined
  */
 bool HM_set(HM* self, const char* key, void* value);
+
+/**
+ * \brief           inserts a new key value pair into the hashmap using key with provided lenght
+ * \note            calls HM_grow() if element count > capacity, thus will crash on allocation 
+ *                  failure if HM_DISABLE_ALLOC_PANIC is not defined
+ * \param self:     hashmap handle 
+ * \param key:      key to lookup in hashmap 
+ * \param key_len:  length of key in bytes
+ * \param value:    pointer to value to be inserted 
+ * \returns         true if insertion was succesful, false if an allocation failed **and** 
+ *                  HM_DISABLE_ALLOC_PANIC is defined
+ */
+bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value);
 
 /**
  * \brief         removes a key value pair from the hashmap
@@ -137,6 +153,13 @@ bool HM_set(HM* self, const char* key, void* value);
  * \param key:    key to remove from hashmap
  */
 void HM_remove(HM* self, const char* key);
+
+/**
+ * \brief         removes a key value pair from the hashmap
+ * \param self:   hashmap handle 
+ * \param key:    key to remove from hashmap
+ */
+void HM_kwl_remove(HM* self, const void* key, size_t key_len);
 
 /**
  * \brief           returns HM_Iterator based on give HM_Iterator passed as argument
@@ -157,6 +180,14 @@ HM_Iterator HM_iterate(HM* self, HM_Iterator current);
 const char* HM_key_at(HM* self, HM_Iterator it);
 
 /**
+ * \brief         returns key length for corresponding HM_Iterator
+ * \param self:   hashmap handle 
+ * \param it:     HM_Iterator by which to get the key length
+ * \return        NULL if invalid iterator, otherwise pointer
+ */
+const size_t* HM_key_len_at(HM* self, HM_Iterator it);
+
+/**
  * \brief         returns pointer to value for corresponding HM_Iterator
  * \param self:   hashmap handle 
  * \param it:     HM_Iterator by which to get the value
@@ -169,21 +200,31 @@ void* HM_value_at(HM* self, HM_Iterator it);
   bool HM_##type##_set(HM* self, const char* key, type value);\
   type* HM_##type##_value_at(HM* self, HM_Iterator it);\
   type* HM_##type##_get(HM* self, const char* key);\
+  bool HM_##type##_kwl_set(HM* self, const void* key, size_t key_len, type value);\
+  type* HM_##type##_kwl_get(HM* self, const void* key, size_t key_len);\
 
 #define HM_GEN_WRAPPER_IMPLEMENTATION(type)\
-  bool HM_##type##_init(HM* self, size_t capacity){ return HM_init(self, sizeof(type), capacity); }\
-  bool HM_##type##_set(HM* self, const char* key, type value){ return HM_set(self, key, &value); }\
-  type* HM_##type##_value_at(HM* self, HM_Iterator it){ return HM_value_at(self, it); }\
-  type* HM_##type##_get(HM* self, const char* key){ return HM_get(self, key); }\
+  bool HM_##type##_init(HM* self, size_t capacity)\
+    { return HM_init(self, sizeof(type), capacity); }\
+  bool HM_##type##_set(HM* self, const char* key, type value)\
+    { return HM_set(self, key, &value); }\
+  type* HM_##type##_value_at(HM* self, HM_Iterator it)\
+    { return HM_value_at(self, it); }\
+  type* HM_##type##_get(HM* self, const char* key)\
+    { return HM_get(self, key); }\
+  bool HM_##type##_kwl_set(HM* self, const void* key, size_t key_len, type value)\
+    { return HM_kwl_set(self, key, key_len, &value); }\
+  type* HM_##type##_kwl_get(HM* self, const void* key, size_t key_len)\
+    { return HM_kwl_get(self, key, key_len); }\
 
 
 #ifndef HM_HASH
 #if INTPTR_MAX != INT64_MAX
-#error "HM: default hash algo only supports 64-bit, please define custom HM_HASH(cstr)"
+#error "HM: default hash algo only supports 64-bit, please define custom HM_HASH(str, len)"
 #endif
 
-size_t HM_default_hash(const char *str);
-#define HM_HASH(str) HM_default_hash(str)
+size_t HM_default_hash(const char *str, size_t len);
+#define HM_HASH(str, len) HM_default_hash((const char*)str, len)
 
 #ifdef HM_IMPLEMENTATION
 
@@ -191,15 +232,15 @@ size_t HM_default_hash(const char *str);
 // !! use other version in case of non 64-bit architecture !!
 #define HM_FNV_PRIME 0x00000100000001b3
 #define HM_FNV_BASIS 0xcbf29ce484222325
-size_t HM_default_hash(const char *str) {
-    uint64_t hash = HM_FNV_BASIS;
-    while (*str){
+size_t HM_default_hash(const char *str, size_t len) {
+    size_t hash = HM_FNV_BASIS;
+    const char* end = str + len;
+    while (str < end){
       hash = (hash ^ (unsigned char)(*str++)) * HM_FNV_PRIME;
     }
-    return hash ^ hash>>32;
+    return hash;
 }
-
-#endif //HM_IMPLEMENTATION
+#endif // HM_IMPLEMENTATION
 #endif // HM_HASH
 
 
@@ -212,38 +253,39 @@ HM_Iterator HM_iterate(HM* self, HM_Iterator current){
   }else if(*current == self->last){
     return NULL;
   }else{
-    return &self->next[*current];
+    return &self->entries[*current].next;
   }
 }
 
-bool HM_set(HM* self, const char* key, void* value){
+bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value){
   if(self->count > self->capacity/2){
     if(!HM_grow(self)) return false;
   }
 
-  size_t hash = HM_HASH(key) % self->capacity;
+  size_t hash = HM_HASH(key, key_len) % self->capacity;
   size_t i = hash;
-  while(self->keys[i] != NULL && strcmp(self->keys[i], key) != 0){
+  while(self->entries[i].key != NULL && memcmp(self->entries[i].key, key, key_len) != 0){
     i = (i+1) % self->capacity;
     HM_ASSERT(i != hash && "map is full!");
   }
-  
-  // links should only be updated when new key is inserted
-  if(self->keys[i] == NULL){
+
+  // only update links when new key is inserted
+  if(self->entries[i].key == NULL){
     if(self->count == 0){
       self->first = i;
       self->last = i;
     }else{
-      self->prev[i] = self->last;
-      self->next[self->last] = i;
+      self->entries[i].prev = self->last;
+      self->entries[self->last].next = i;
       self->last = i;
     }
   }
   
   // TODO use internal buffer instead of seperate heap buffer for keys
-  self->keys[i] = HM_CALLOC(strlen(key)+1, sizeof(char));
-  HM_CHECK_ALLOC(self->keys[i]);
-  strcpy(self->keys[i], key);
+  self->entries[i].key = (char*)HM_CALLOC(key_len, sizeof(char));
+  self->entries[i].key_len = key_len;
+  HM_CHECK_ALLOC(self->entries[i].key);
+  memcpy(self->entries[i].key, key, key_len);
 
   memcpy(self->values + i * self->element_size, value, self->element_size);
 
@@ -251,53 +293,82 @@ bool HM_set(HM* self, const char* key, void* value){
   return true;
 }
 
+bool HM_set(HM* self, const char* key, void* value){
+  return HM_kwl_set(self, key, strlen(key), value);
+}
+
 const char* HM_key_at(HM* self, HM_Iterator it){
-  return self->keys[*it];
+  if(it == NULL) return NULL;
+  return self->entries[*it].key;
+}
+
+const size_t* HM_key_len_at(HM* self, HM_Iterator it){
+  if(it == NULL) return NULL;
+  return &self->entries[*it].key_len;
 }
 
 void* HM_value_at(HM* self, HM_Iterator it){
+  if(it == NULL) return NULL;
   return self->values + (*it) * self->element_size;
+}
+
+HM_Iterator HM_kwl_find(HM* self, const void* key, size_t key_len){
+  size_t hash = HM_HASH(key, key_len) % self->capacity;
+  size_t i = hash;
+  while(self->entries[i].key == NULL || memcmp(self->entries[i].key, key, key_len) != 0){
+    i = (i+1) % self->capacity;
+    if(i == hash){
+      return NULL;
+    }
+  }
+  if(i == self->first) return &self->first;
+  return &self->entries[self->entries[i].prev].next;
+}
+
+HM_Iterator HM_find(HM* self, const char* key){
+  return HM_kwl_find(self, key, strlen(key));
 }
 
 void* HM_get(HM* self, const char* key){
   if(self->count == 0) return NULL;
-
-  size_t hash = HM_HASH(key) % self->capacity;
-  size_t i = hash;
-  while(self->keys[i] == NULL || strcmp(self->keys[i], key) != 0){
-    i = (i+1) % self->capacity;
-    if(i == hash) return NULL;
-  }
-
-  return self->values + i * self->element_size;
+  return HM_value_at(self, HM_kwl_find(self, key, strlen(key)));
 }
 
-void HM_remove(HM* self, const char* key){
+void* HM_kwl_get(HM* self, const void* key, size_t key_len){
+  if(self->count == 0) return NULL;
+  return HM_value_at(self, HM_kwl_find(self, key, key_len));
+}
+
+void HM_kwl_remove(HM* self, const void* key, size_t key_len){
   if(self->count == 0) return;
 
-  size_t hash = HM_HASH(key) % self->capacity;
+  size_t hash = HM_HASH(key, key_len) % self->capacity;
   size_t i = hash;
-  while(self->keys[i] == NULL || strcmp(self->keys[i], key) != 0){
+  while(self->entries[i].key == NULL || memcmp(self->entries[i].key, key, key_len) != 0){
     i = (i+1) % self->capacity;
     if(i == hash) return;
   }
 
-  HM_FREE(self->keys[i]);
-  self->keys[i] = NULL;
+  HM_FREE(self->entries[i].key);
+  self->entries[i].key = NULL;
   
-  size_t prev_index = self->prev[i];
-  size_t next_index = self->next[i];
+  size_t prev_index = self->entries[i].prev;
+  size_t next_index = self->entries[i].next;
   
   if(i == self->first){
     self->first = next_index;
   }else if (i == self->last){
     self->last = prev_index;
   }else{
-    self->prev[next_index] = prev_index;
-    self->next[prev_index] = next_index;
+    self->entries[next_index].prev = prev_index;
+    self->entries[prev_index].next = next_index;
   }
 
   self->count--;
+}
+
+void HM_remove(HM* self, const char* key){
+  HM_kwl_remove(self, key, strlen(key));
 }
 
 bool HM_allocate(HM* self, size_t element_size, size_t capacity){
@@ -305,25 +376,12 @@ bool HM_allocate(HM* self, size_t element_size, size_t capacity){
   self->element_size = element_size;
 
   
-  self->keys = HM_CALLOC(capacity, sizeof(self->keys[0]));
-  HM_CHECK_ALLOC(self->keys);
+  self->entries = (HM_Entry*)HM_CALLOC(capacity, sizeof(HM_Entry));
+  HM_CHECK_ALLOC(self->entries);
 
   self->values = HM_CALLOC(capacity, element_size);
   HM_CHECK_ALLOC(self->values, 
-    HM_FREE(self->keys);
-  );
-
-  self->next = HM_CALLOC(capacity, sizeof(self->next[0]));
-  HM_CHECK_ALLOC(self->next, 
-    HM_FREE(self->keys); 
-    HM_FREE(self->values);
-  );
-
-  self->prev = HM_CALLOC(capacity, sizeof(self->prev[0]));
-  HM_CHECK_ALLOC(self->prev, 
-    HM_FREE(self->keys); 
-    HM_FREE(self->values); 
-    HM_FREE(self->next);
+    HM_FREE(self->entries);
   );
 
   return true;
@@ -355,10 +413,23 @@ void HM_deinit(HM* self){
   for(HM_Iterator i = HM_iterate(self, NULL); i != NULL; i = HM_iterate(self, i)){
     HM_FREE((void*)HM_key_at(self, i));
   }
-  HM_FREE(self->keys);
+  HM_FREE(self->entries);
   HM_FREE(self->values);
-  HM_FREE(self->next);
-  HM_FREE(self->prev);
+}
+
+HM* HM_new(size_t element_size, size_t capacity){
+  HM* self = (HM*)HM_CALLOC(1, sizeof(HM));
+  HM_CHECK_ALLOC(self);
+  if(!HM_init(self, element_size, capacity)){
+    HM_deinit(self);
+    return NULL;
+  }
+  return self;
+}
+
+void HM_delete(HM* self){
+  HM_deinit(self);
+  HM_FREE(self);
 }
 
 #endif // HM_IMPLEMENTATION
