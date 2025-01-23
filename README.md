@@ -133,8 +133,8 @@ void HM_kwl_remove(HM* self, const void* key, size_t key_len);
 
 The type wrapped API also provides the same variants, e.g. for `int`:
 ```c
-bool HM_int_kwl_set(HM* self, const void* key, size_t key_len, void* value);
-void* HM_int_kwl_get(HM* self, const void* key, size_t key_len);
+bool HM_int_kwl_set(HM* self, const void* key, size_t key_len, int value);
+int* HM_int_kwl_get(HM* self, const void* key, size_t key_len);
 void HM_int_kwl_remove(HM* self, const void* key, size_t key_len);
 ```
 
