@@ -264,12 +264,12 @@ bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value){
 
   size_t hash = HM_HASH(key, key_len) % self->capacity;
   size_t i = hash;
-  while(self->entries[i].key != NULL && memcmp(self->entries[i].key, key, key_len) != 0){
+  while(self->entries[i].key != NULL && (self->entries[i].key_len != key_len || memcmp(self->entries[i].key, key, key_len) != 0)){
     i = (i+1) % self->capacity;
     HM_ASSERT(i != hash && "map is full!");
   }
 
-  // only update links when new key is inserted
+  // only update entries when new key is inserted
   if(self->entries[i].key == NULL){
     if(self->count == 0){
       self->first = i;
@@ -279,14 +279,26 @@ bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value){
       self->entries[self->last].next = i;
       self->last = i;
     }
+
+    // TODO use internal buffer instead of seperate heap buffer for keys
+    self->entries[i].key = (char*)HM_CALLOC(key_len, sizeof(char));
+    self->entries[i].key_len = key_len;
+    HM_CHECK_ALLOC(self->entries[i].key);
+    memcpy(self->entries[i].key, key, key_len);
+  }else{
+    HM_ASSERT(self->entries[i].key_len == key_len);
+    HM_ASSERT(memcmp(self->entries[i].key, key, key_len) == 0);
+#if 0
+    fprintf(stderr, "memcmp(%.*X (%zu), %.*X, %zu) == %d\n",
+        self->entries[i].key_len,self->entries[i].key, 
+        self->entries[i].key_len,
+        key_len, key,
+        key_len,
+        memcmp(self->entries[i].key, key, key_len) == 0);
+    //fprintf(stderr, "overwriting at key: (%.*X, %.*X), prev: %.*X\n", key_len, key, self->entries[i].key_len, self->entries[i].key, self->element_size, *(size_t*)self->values+i*self->element_size);
+#endif
   }
   
-  // TODO use internal buffer instead of seperate heap buffer for keys
-  self->entries[i].key = (char*)HM_CALLOC(key_len, sizeof(char));
-  self->entries[i].key_len = key_len;
-  HM_CHECK_ALLOC(self->entries[i].key);
-  memcpy(self->entries[i].key, key, key_len);
-
   memcpy(self->values + i * self->element_size, value, self->element_size);
 
   self->count++;
@@ -312,7 +324,9 @@ void* HM_value_at(HM* self, HM_Iterator it){
   return self->values + (*it) * self->element_size;
 }
 
+
 HM_Iterator HM_kwl_find(HM* self, const void* key, size_t key_len){
+#if 1
   size_t hash = HM_HASH(key, key_len) % self->capacity;
   size_t i = hash;
   while(self->entries[i].key == NULL || memcmp(self->entries[i].key, key, key_len) != 0){
@@ -323,6 +337,16 @@ HM_Iterator HM_kwl_find(HM* self, const void* key, size_t key_len){
   }
   if(i == self->first) return &self->first;
   return &self->entries[self->entries[i].prev].next;
+#endif
+#if 0
+  for(HM_Iterator i = HM_iterate(self, NULL); i != NULL; i = HM_iterate(self, i)){
+    if(*HM_key_len_at(self, i) == key_len && memcmp(HM_key_at(self, i), key, key_len) == 0){
+      return i;
+    }
+  }
+  return NULL;
+#endif
+  return NULL;
 }
 
 HM_Iterator HM_find(HM* self, const char* key){
@@ -342,15 +366,12 @@ void* HM_kwl_get(HM* self, const void* key, size_t key_len){
 void HM_kwl_remove(HM* self, const void* key, size_t key_len){
   if(self->count == 0) return;
 
-  size_t hash = HM_HASH(key, key_len) % self->capacity;
-  size_t i = hash;
-  while(self->entries[i].key == NULL || memcmp(self->entries[i].key, key, key_len) != 0){
-    i = (i+1) % self->capacity;
-    if(i == hash) return;
-  }
+  HM_Iterator it = HM_kwl_find(self, key, key_len);
+  size_t i = *it;
 
   HM_FREE(self->entries[i].key);
   self->entries[i].key = NULL;
+  self->entries[i].key_len = 0;
   
   size_t prev_index = self->entries[i].prev;
   size_t next_index = self->entries[i].next;
@@ -396,7 +417,7 @@ bool HM_grow(HM* self){
 
   // rehash and deinit
   for(HM_Iterator i = HM_iterate(self, NULL); i != NULL; i = HM_iterate(self, i)){
-    HM_set(&new_hm, HM_key_at(self, i), HM_value_at(self, i));
+    HM_kwl_set(&new_hm, HM_key_at(self, i), *HM_key_len_at(self, i), HM_value_at(self, i));
   }
   HM_deinit(self);
 

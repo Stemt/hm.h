@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <stdio.h>
 #define HM_IMPLEMENTATION
 #define HM_DISABLE_ALLOC_PANIC
