@@ -120,6 +120,29 @@ int main(void){
 
 ```
 
+### Using Keys with Custom Length (kwl)
+
+If you want to use a custom type as a key or simply a non null terminated string there are function variants which allow you to specify a length for the given key value.
+These variants are indicated with `kwl`, short for "key with length".
+
+```c
+bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value);
+void* HM_kwl_get(HM* self, const void* key, size_t key_len);
+void HM_kwl_remove(HM* self, const void* key, size_t key_len);
+```
+
+The type wrapped API also provides the same variants, e.g. for `int`:
+```c
+bool HM_int_kwl_set(HM* self, const void* key, size_t key_len, void* value);
+void* HM_int_kwl_get(HM* self, const void* key, size_t key_len);
+void HM_int_kwl_remove(HM* self, const void* key, size_t key_len);
+```
+
+Specifically for non null terminated strings there is also a function for requesting the key length.
+```c
+const size_t* HM_key_len_at(HM* self, HM_Iterator it);
+```
+
 ### Iterating over keys and values
 
 > [!NOTE]
