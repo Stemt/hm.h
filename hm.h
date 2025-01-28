@@ -74,10 +74,7 @@ typedef struct{
 } HM_Entry;
 
 typedef struct{
-  //char** keys;
   void* values;
-  //size_t* next;
-  //size_t* prev;
   HM_Entry* entries;
   size_t first;
   size_t last;
@@ -123,6 +120,23 @@ bool HM_grow(HM* self);
 void* HM_get(HM* self, const char* key);
 
 /**
+ * \brief           returns pointer to element associated with key if available
+ * \param self:     hashmap handle 
+ * \param key:      key to lookup in hashmap 
+ * \param key_len:  length of the given key
+ * \return          NULL if key was not found in hashmap otherwise pointer to element in hashmap
+ */
+void* HM_kwl_get(HM* self, const void* key, size_t key_len);
+
+/**
+ * \brief   'sized key' convenience macro for HM_kwl_get, equivalent to 
+ *          'HM_kwl_get(self, &(key), sizeof(key))'
+ * \note    make sure to dereference if you have a pointer to your key!
+ */
+#define HM_sk_get(self, key)\
+HM_kwl_get(self, &(key), sizeof(key))
+
+/**
  * \brief         inserts a new key value pair into the hashmap
  * \note          calls HM_grow() if element count > capacity, thus will crash on allocation 
  *                failure if HM_DISABLE_ALLOC_PANIC is not defined
@@ -148,6 +162,14 @@ bool HM_set(HM* self, const char* key, void* value);
 bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value);
 
 /**
+ * \brief   'sized key' convenience macro for HM_kwl_set, equivalent to 
+ *          'HM_kwl_set(self, &(key), sizeof(key), value)'
+ * \note    make sure to dereference if you have a pointer to your key!
+ */
+#define HM_sk_set(self, key, value)\
+  HM_kwl_set(self, &(key), sizeof(key), value)
+
+/**
  * \brief         removes a key value pair from the hashmap
  * \param self:   hashmap handle 
  * \param key:    key to remove from hashmap
@@ -162,6 +184,41 @@ void HM_remove(HM* self, const char* key);
 void HM_kwl_remove(HM* self, const void* key, size_t key_len);
 
 /**
+ * \brief   'sized key' convenience macro for HM_kwl_remove, equivalent to 
+ *          'HM_kwl_remove(self, &(key), sizeof(key))'
+ * \note    make sure to dereference if you have a pointer to your key!
+ */
+#define HM_sk_remove(self, key)\
+  HM_kwl_remove(self, &(key), sizeof(key))
+
+/**
+ * \brief         returns HM_Iterator for given key if available
+ * \param self:   hashmap handle
+ * \param key:    key to of element to look up
+ *
+ * \return        HM_Iterator for the found element, if not found: NULL
+ */
+HM_Iterator HM_find(HM* self, const char* key);
+
+/**
+ * \brief           returns HM_Iterator for given key if available
+ * \param self:     hashmap handle
+ * \param key:      key to of element to look up
+ * \param key_len:  length of the given key
+ *
+ * \return          HM_Iterator for the found element, if not found: NULL
+ */
+HM_Iterator HM_kwl_find(HM* self, const void* key, size_t key_len);
+
+/**
+ * \brief   'sized key' convenience macro for HM_kwl_find, equivalent to 
+ *          'HM_kwl_find(self, &(key), sizeof(key))'
+ * \note    make sure to dereference if you have a pointer to your key!
+ */
+#define HM_sk_find(self, key)\
+  HM_kwl_find(self, &(key), sizeof(key))
+
+/**
  * \brief           returns HM_Iterator based on give HM_Iterator passed as argument
  * \param self:     hashmap handle 
  * \param current:  NULL to get a HM_Iterator for the first element or previously returned 
@@ -170,6 +227,22 @@ void HM_kwl_remove(HM* self, const void* key, size_t key_len);
  *                  the last element
  */
 HM_Iterator HM_iterate(HM* self, HM_Iterator current);
+
+/**
+ * \brief         returns HM_Iterator to the first element
+ * \param self:   hashmap handle
+ *
+ * \return        HM_Iterator to the first element of the given hashmap
+ */
+#define HM_begin(self) ((HM_Iterator)&((self)->first))
+
+/**
+ * \brief         returns HM_Iterator to the last element
+ * \param self:   hashmap handle
+ *
+ * \return        HM_Iterator to the last element of the given hashmap
+ */
+#define HM_end(self) ((HM_Iterator)&((self)->end))
 
 /**
  * \brief         returns key for corresponding HM_Iterator
@@ -224,7 +297,7 @@ void* HM_value_at(HM* self, HM_Iterator it);
 #endif
 
 size_t HM_default_hash(const char *str, size_t len);
-#define HM_HASH(str, len) HM_default_hash((const char*)str, len)
+#define HM_HASH(str, len) HM_default_hash((const char*)(str), len)
 
 #ifdef HM_IMPLEMENTATION
 
@@ -232,7 +305,7 @@ size_t HM_default_hash(const char *str, size_t len);
 // !! use other version in case of non 64-bit architecture !!
 #define HM_FNV_PRIME 0x00000100000001b3
 #define HM_FNV_BASIS 0xcbf29ce484222325
-size_t HM_default_hash(const char *str, size_t len) {
+size_t HM_default_hash(const char *str, size_t len){
     size_t hash = HM_FNV_BASIS;
     const char* end = str + len;
     while (str < end){
@@ -288,15 +361,6 @@ bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value){
   }else{
     HM_ASSERT(self->entries[i].key_len == key_len);
     HM_ASSERT(memcmp(self->entries[i].key, key, key_len) == 0);
-#if 0
-    fprintf(stderr, "memcmp(%.*X (%zu), %.*X, %zu) == %d\n",
-        self->entries[i].key_len,self->entries[i].key, 
-        self->entries[i].key_len,
-        key_len, key,
-        key_len,
-        memcmp(self->entries[i].key, key, key_len) == 0);
-    //fprintf(stderr, "overwriting at key: (%.*X, %.*X), prev: %.*X\n", key_len, key, self->entries[i].key_len, self->entries[i].key, self->element_size, *(size_t*)self->values+i*self->element_size);
-#endif
   }
   
   memcpy(self->values + i * self->element_size, value, self->element_size);
@@ -326,7 +390,6 @@ void* HM_value_at(HM* self, HM_Iterator it){
 
 
 HM_Iterator HM_kwl_find(HM* self, const void* key, size_t key_len){
-#if 1
   size_t hash = HM_HASH(key, key_len) % self->capacity;
   size_t i = hash;
   while(self->entries[i].key == NULL || memcmp(self->entries[i].key, key, key_len) != 0){
@@ -337,15 +400,6 @@ HM_Iterator HM_kwl_find(HM* self, const void* key, size_t key_len){
   }
   if(i == self->first) return &self->first;
   return &self->entries[self->entries[i].prev].next;
-#endif
-#if 0
-  for(HM_Iterator i = HM_iterate(self, NULL); i != NULL; i = HM_iterate(self, i)){
-    if(*HM_key_len_at(self, i) == key_len && memcmp(HM_key_at(self, i), key, key_len) == 0){
-      return i;
-    }
-  }
-  return NULL;
-#endif
   return NULL;
 }
 
