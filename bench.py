@@ -20,5 +20,5 @@ print("done")
 print("results:")
 for function in results.keys():
     avg = sum(results[function])/len(results[function])
-    avg_ms = avg / 1000.0
-    print(f'{function:16}: {avg_ms:>10.1f} ms')
+    avg_ms = avg / 1000000.0
+    print(f'{function:16}: {avg_ms:>8.2f} ms')
