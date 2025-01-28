@@ -64,6 +64,7 @@
 }
 #endif
 
+typedef size_t (*HM_HashFunc)(const char* key, size_t key_len);
 typedef const size_t* HM_Iterator;
 
 typedef struct{
@@ -81,6 +82,8 @@ typedef struct{
   size_t element_size;
   size_t count;
   size_t capacity;
+
+  HM_HashFunc hash_func;
 } HM;
 
 /**
@@ -297,7 +300,7 @@ void* HM_value_at(HM* self, HM_Iterator it);
 #endif
 
 size_t HM_default_hash(const char *str, size_t len);
-#define HM_HASH(str, len) HM_default_hash((const char*)(str), len)
+#define HM_HASH HM_default_hash
 
 #ifdef HM_IMPLEMENTATION
 
@@ -335,7 +338,7 @@ bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value){
     if(!HM_grow(self)) return false;
   }
 
-  size_t hash = HM_HASH(key, key_len) % self->capacity;
+  size_t hash = self->hash_func(key, key_len) % self->capacity;
   size_t i = hash;
   while(self->entries[i].key != NULL && (self->entries[i].key_len != key_len || memcmp(self->entries[i].key, key, key_len) != 0)){
     i = (i+1) % self->capacity;
@@ -390,7 +393,7 @@ void* HM_value_at(HM* self, HM_Iterator it){
 
 
 HM_Iterator HM_kwl_find(HM* self, const void* key, size_t key_len){
-  size_t hash = HM_HASH(key, key_len) % self->capacity;
+  size_t hash = self->hash_func(key, key_len) % self->capacity;
   size_t i = hash;
   while(self->entries[i].key == NULL || memcmp(self->entries[i].key, key, key_len) != 0){
     i = (i+1) % self->capacity;
@@ -449,7 +452,6 @@ void HM_remove(HM* self, const char* key){
 bool HM_allocate(HM* self, size_t element_size, size_t capacity){
   self->capacity = capacity;
   self->element_size = element_size;
-
   
   self->entries = (HM_Entry*)HM_CALLOC(capacity, sizeof(HM_Entry));
   HM_CHECK_ALLOC(self->entries);
@@ -479,8 +481,13 @@ bool HM_grow(HM* self){
   return true;
 }
 
+void HM_override_hash_func(HM* self, HM_HashFunc func){
+  self->hash_func = func;
+}
+
 bool HM_init(HM* self, size_t element_size, size_t capacity){
   memset(self, 0, sizeof(*self));
+  self->hash_func = HM_HASH;
   return HM_allocate(self, element_size, capacity > 0 ? capacity : HM_DEFAULT_CAPACITY);
 }
 

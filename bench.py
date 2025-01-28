@@ -6,6 +6,8 @@ cmd ='make bench'
 results = {}
 for i in range(10):
     proc = subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE)
+    if proc.wait() != 0:
+        exit(1)
     for line in proc.stdout:
         line = line.decode('utf-8')
         if 'HM_Bench' in line and 'ns' in line:
