@@ -466,7 +466,7 @@ bool HM_allocate(HM* self, size_t element_size, size_t capacity){
 
 bool HM_grow(HM* self){
   HM new_hm = {0};
-  
+  new_hm.hash_func = self->hash_func;
   if(!HM_allocate(&new_hm, self->element_size, self->capacity * 2)){
     return false;
   }
