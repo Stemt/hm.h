@@ -75,7 +75,7 @@ typedef struct{
 } HM_Entry;
 
 typedef struct{
-  void* values;
+  unsigned char* values;
   HM_Entry* entries;
   size_t first;
   size_t last;
@@ -338,7 +338,7 @@ bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value){
     if(!HM_grow(self)) return false;
   }
 
-  size_t hash = self->hash_func(key, key_len) % self->capacity;
+  size_t hash = self->hash_func((const char*)key, key_len) % self->capacity;
   size_t i = hash;
   while(self->entries[i].key != NULL && (self->entries[i].key_len != key_len || memcmp(self->entries[i].key, key, key_len) != 0)){
     i = (i+1) % self->capacity;
@@ -393,7 +393,7 @@ void* HM_value_at(HM* self, HM_Iterator it){
 
 
 HM_Iterator HM_kwl_find(HM* self, const void* key, size_t key_len){
-  size_t hash = self->hash_func(key, key_len) % self->capacity;
+  size_t hash = self->hash_func((const char*)key, key_len) % self->capacity;
   size_t i = hash;
   while(self->entries[i].key == NULL || memcmp(self->entries[i].key, key, key_len) != 0){
     i = (i+1) % self->capacity;
@@ -424,6 +424,7 @@ void HM_kwl_remove(HM* self, const void* key, size_t key_len){
   if(self->count == 0) return;
 
   HM_Iterator it = HM_kwl_find(self, key, key_len);
+  if(it == NULL) return;
   size_t i = *it;
 
   HM_FREE(self->entries[i].key);
@@ -456,7 +457,7 @@ bool HM_allocate(HM* self, size_t element_size, size_t capacity){
   self->entries = (HM_Entry*)HM_CALLOC(capacity, sizeof(HM_Entry));
   HM_CHECK_ALLOC(self->entries);
 
-  self->values = HM_CALLOC(capacity, element_size);
+  self->values = (unsigned char*)HM_CALLOC(capacity, element_size);
   HM_CHECK_ALLOC(self->values, 
     HM_FREE(self->entries);
   );
