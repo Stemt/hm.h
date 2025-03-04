@@ -370,7 +370,8 @@ bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value){
   HM_Entry* entry = HM_entry_index(self, i);
   while(entry->key != NULL && 
       (entry->key_len != key_len || 
-      memcmp(entry->key, key, key_len) != 0)
+      (entry->key[0] != ((const char*)key)[0] ||
+       memcmp(entry->key, key, key_len) != 0))
   ){
     i = (i+1) % self->capacity;
     HM_ASSERT(i != hash && "map is full!");
@@ -427,13 +428,18 @@ void* HM_value_at(HM* self, HM_Iterator it){
 HM_Iterator HM_kwl_find(HM* self, const void* key, size_t key_len){
   size_t hash = self->hash_func((const char*)key, key_len) % self->capacity;
   size_t i = hash;
-  while(HM_entry_index(self, i)->key == NULL || memcmp(HM_entry_index(self, i)->key, key, key_len) != 0){
+  HM_Entry* entry = HM_entry_index(self, i);
+  while(entry->key == NULL || 
+      (entry->key_len != key_len || 
+      (entry->key[0] != ((const char*)key)[0] ||
+       memcmp(entry->key, key, key_len) != 0))
+  ){
     i = (i+1) % self->capacity;
     if(i == hash){
       return NULL;
     }
+    entry = HM_entry_index(self, i);
   }
-  HM_Entry* entry = HM_entry_index(self, i);
   HM_Iterator it = &self->first;
   HM_Entry* prev = HM_entry_index(self, entry->prev);
   if(i != self->first){
