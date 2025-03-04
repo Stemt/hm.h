@@ -76,7 +76,7 @@ typedef struct{
 } HM_Entry;
 
 typedef struct{
-  HM_Entry* entries;
+  unsigned char* entries;
   size_t first;
   size_t last;
   size_t element_size;
@@ -85,6 +85,8 @@ typedef struct{
 
   HM_HashFunc hash_func;
 } HM;
+
+#define HM_entry_index(self, i) ((HM_Entry*)((self)->entries + ((sizeof(HM_Entry)+self->element_size)*(i))))
 
 /**
  * \brief                 initializes the hashmap
@@ -331,7 +333,7 @@ HM_Iterator HM_iterate(HM* self, HM_Iterator current){
   }else if(*current == self->last){
     return NULL;
   }else{
-    return &self->entries[*current].next;
+    return &HM_entry_index(self, *current)->next;
   }
 }
 
@@ -342,20 +344,20 @@ void HM_swap_order(HM* self, HM_Iterator a_it, HM_Iterator b_it){
   int a = *a_it;
   int b = *b_it;
 
-  int a_prev = self->entries[a].prev;
-  int a_next = self->entries[a].next;
-  int b_prev = self->entries[b].prev;
-  int b_next = self->entries[b].next;
+  int a_prev = HM_entry_index(self, a)->prev;
+  int a_next = HM_entry_index(self, a)->next;
+  int b_prev = HM_entry_index(self, b)->prev;
+  int b_next = HM_entry_index(self, b)->next;
 
-  self->entries[a_prev].next = b; 
-  self->entries[a].prev = b_prev;
-  self->entries[a].next = b_next;
-  self->entries[a_next].prev = b;
+  HM_entry_index(self, a_prev)->next = b; 
+  HM_entry_index(self, a)->prev = b_prev;
+  HM_entry_index(self, a)->next = b_next;
+  HM_entry_index(self, a_next)->prev = b;
   
-  self->entries[b_next].prev = a;
-  self->entries[b].prev = a_prev;
-  self->entries[b].next = a_next;
-  self->entries[b_prev].next = a; 
+  HM_entry_index(self, b_next)->prev = a;
+  HM_entry_index(self, b)->prev = a_prev;
+  HM_entry_index(self, b)->next = a_next;
+  HM_entry_index(self, b_prev)->next = a; 
 }
 
 bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value){
@@ -365,33 +367,36 @@ bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value){
 
   size_t hash = self->hash_func((const char*)key, key_len) % self->capacity;
   size_t i = hash;
-  while(self->entries[i].key != NULL && (self->entries[i].key_len != key_len || memcmp(self->entries[i].key, key, key_len) != 0)){
+  while(HM_entry_index(self, i)->key != NULL && 
+      (HM_entry_index(self, i)->key_len != key_len || 
+      memcmp(HM_entry_index(self, i)->key, key, key_len) != 0)
+  ){
     i = (i+1) % self->capacity;
     HM_ASSERT(i != hash && "map is full!");
   }
 
   // only update entries when new key is inserted
-  if(self->entries[i].key == NULL){
+  if(HM_entry_index(self, i)->key == NULL){
     if(self->count == 0){
       self->first = i;
       self->last = i;
     }else{
-      self->entries[i].prev = self->last;
-      self->entries[self->last].next = i;
+      HM_entry_index(self, i)->prev = self->last;
+      HM_entry_index(self, self->last)->next = i;
       self->last = i;
     }
 
     // TODO use internal buffer instead of seperate heap buffer for keys
-    self->entries[i].key = (char*)HM_CALLOC(key_len, sizeof(char));
-    self->entries[i].key_len = key_len;
-    HM_CHECK_ALLOC(self->entries[i].key);
-    memcpy(self->entries[i].key, key, key_len);
+    HM_entry_index(self, i)->key = (char*)HM_CALLOC(key_len, sizeof(char));
+    HM_entry_index(self, i)->key_len = key_len;
+    HM_CHECK_ALLOC(HM_entry_index(self, i)->key);
+    memcpy(HM_entry_index(self, i)->key, key, key_len);
   }else{
-    HM_ASSERT(self->entries[i].key_len == key_len);
-    HM_ASSERT(memcmp(self->entries[i].key, key, key_len) == 0);
+    HM_ASSERT(HM_entry_index(self, i)->key_len == key_len);
+    HM_ASSERT(memcmp(HM_entry_index(self, i)->key, key, key_len) == 0);
   }
   
-  memcpy(self->entries[i].value, value, self->element_size);
+  memcpy(HM_entry_index(self, i)->value, value, self->element_size);
 
   self->count++;
   return true;
@@ -403,30 +408,30 @@ bool HM_set(HM* self, const char* key, void* value){
 
 const char* HM_key_at(HM* self, HM_Iterator it){
   if(it == NULL) return NULL;
-  return self->entries[*it].key;
+  return HM_entry_index(self, *it)->key;
 }
 
 const size_t* HM_key_len_at(HM* self, HM_Iterator it){
   if(it == NULL) return NULL;
-  return &self->entries[*it].key_len;
+  return &HM_entry_index(self, *it)->key_len;
 }
 
 void* HM_value_at(HM* self, HM_Iterator it){
   if(it == NULL) return NULL;
-  return self->entries[*it].value;
+  return HM_entry_index(self, *it)->value;
 }
 
 HM_Iterator HM_kwl_find(HM* self, const void* key, size_t key_len){
   size_t hash = self->hash_func((const char*)key, key_len) % self->capacity;
   size_t i = hash;
-  while(self->entries[i].key == NULL || memcmp(self->entries[i].key, key, key_len) != 0){
+  while(HM_entry_index(self, i)->key == NULL || memcmp(HM_entry_index(self, i)->key, key, key_len) != 0){
     i = (i+1) % self->capacity;
     if(i == hash){
       return NULL;
     }
   }
   if(i == self->first) return &self->first;
-  return &self->entries[self->entries[i].prev].next;
+  return &HM_entry_index(self, HM_entry_index(self, i)->prev)->next;
   return NULL;
 }
 
@@ -451,20 +456,20 @@ void HM_kwl_remove(HM* self, const void* key, size_t key_len){
   if(it == NULL) return;
   size_t i = *it;
 
-  HM_FREE(self->entries[i].key);
-  self->entries[i].key = NULL;
-  self->entries[i].key_len = 0;
+  HM_FREE(HM_entry_index(self, i)->key);
+  HM_entry_index(self, i)->key = NULL;
+  HM_entry_index(self, i)->key_len = 0;
   
-  size_t prev_index = self->entries[i].prev;
-  size_t next_index = self->entries[i].next;
+  size_t prev_index = HM_entry_index(self, i)->prev;
+  size_t next_index = HM_entry_index(self, i)->next;
   
   if(i == self->first){
     self->first = next_index;
   }else if (i == self->last){
     self->last = prev_index;
   }else{
-    self->entries[next_index].prev = prev_index;
-    self->entries[prev_index].next = next_index;
+    HM_entry_index(self, next_index)->prev = prev_index;
+    HM_entry_index(self, prev_index)->next = next_index;
   }
 
   self->count--;
@@ -478,7 +483,7 @@ bool HM_allocate(HM* self, size_t element_size, size_t capacity){
   self->capacity = capacity;
   self->element_size = element_size;
   
-  self->entries = (HM_Entry*)HM_CALLOC(capacity, sizeof(HM_Entry)+element_size);
+  self->entries = (unsigned char*)HM_CALLOC(capacity, sizeof(HM_Entry)+element_size);
   HM_CHECK_ALLOC(self->entries);
  return true;
 }
