@@ -421,7 +421,6 @@ const size_t* HM_key_len_at(HM* self, HM_Iterator it){
 
 void* HM_value_at(HM* self, HM_Iterator it){
   if(it == NULL) return NULL;
-  HM_Entry* entry = HM_entry_index(self, *it);
   return HM_entry_index(self, *it)->value;
 }
 
