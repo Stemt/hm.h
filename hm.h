@@ -361,42 +361,44 @@ void HM_swap_order(HM* self, HM_Iterator a_it, HM_Iterator b_it){
 }
 
 bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value){
-  if(self->count >= self->capacity>>1){
+  if(self->count >= self->capacity/2){
     if(!HM_grow(self)) return false;
   }
 
   size_t hash = self->hash_func((const char*)key, key_len) % self->capacity;
   size_t i = hash;
-  while(HM_entry_index(self, i)->key != NULL && 
-      (HM_entry_index(self, i)->key_len != key_len || 
-      memcmp(HM_entry_index(self, i)->key, key, key_len) != 0)
+  HM_Entry* entry = HM_entry_index(self, i);
+  while(entry->key != NULL && 
+      (entry->key_len != key_len || 
+      memcmp(entry->key, key, key_len) != 0)
   ){
     i = (i+1) % self->capacity;
     HM_ASSERT(i != hash && "map is full!");
+    entry = HM_entry_index(self, i);
   }
 
   // only update entries when new key is inserted
-  if(HM_entry_index(self, i)->key == NULL){
+  if(entry->key == NULL){
     if(self->count == 0){
       self->first = i;
       self->last = i;
     }else{
-      HM_entry_index(self, i)->prev = self->last;
+      entry->prev = self->last;
       HM_entry_index(self, self->last)->next = i;
       self->last = i;
     }
 
     // TODO use internal buffer instead of seperate heap buffer for keys
-    HM_entry_index(self, i)->key = (char*)HM_CALLOC(key_len, sizeof(char));
-    HM_entry_index(self, i)->key_len = key_len;
-    HM_CHECK_ALLOC(HM_entry_index(self, i)->key);
-    memcpy(HM_entry_index(self, i)->key, key, key_len);
+    entry->key = (char*)HM_CALLOC(key_len, sizeof(char));
+    entry->key_len = key_len;
+    HM_CHECK_ALLOC(entry->key);
+    memcpy(entry->key, key, key_len);
   }else{
-    HM_ASSERT(HM_entry_index(self, i)->key_len == key_len);
-    HM_ASSERT(memcmp(HM_entry_index(self, i)->key, key, key_len) == 0);
+    HM_ASSERT(entry->key_len == key_len);
+    HM_ASSERT(memcmp(entry->key, key, key_len) == 0);
   }
   
-  memcpy(HM_entry_index(self, i)->value, value, self->element_size);
+  memcpy(entry->value, value, self->element_size);
 
   self->count++;
   return true;
@@ -418,6 +420,7 @@ const size_t* HM_key_len_at(HM* self, HM_Iterator it){
 
 void* HM_value_at(HM* self, HM_Iterator it){
   if(it == NULL) return NULL;
+  HM_Entry* entry = HM_entry_index(self, *it);
   return HM_entry_index(self, *it)->value;
 }
 
@@ -430,9 +433,13 @@ HM_Iterator HM_kwl_find(HM* self, const void* key, size_t key_len){
       return NULL;
     }
   }
-  if(i == self->first) return &self->first;
-  return &HM_entry_index(self, HM_entry_index(self, i)->prev)->next;
-  return NULL;
+  HM_Entry* entry = HM_entry_index(self, i);
+  HM_Iterator it = &self->first;
+  HM_Entry* prev = HM_entry_index(self, entry->prev);
+  if(i != self->first){
+    it = &prev->next;
+  }
+  return it;
 }
 
 HM_Iterator HM_find(HM* self, const char* key){
@@ -481,10 +488,13 @@ void HM_remove(HM* self, const char* key){
 
 bool HM_allocate(HM* self, size_t element_size, size_t capacity){
   self->capacity = capacity;
+  element_size = element_size+(element_size%sizeof(void*)); // make sure memory is aligned
   self->element_size = element_size;
   
-  self->entries = (unsigned char*)HM_CALLOC(capacity, sizeof(HM_Entry)+element_size);
+  //self->entries = (unsigned char*)HM_CALLOC(capacity, sizeof(HM_Entry)+element_size);
+  self->entries = (unsigned char*)HM_CALLOC(capacity, (sizeof(HM_Entry)+element_size));
   HM_CHECK_ALLOC(self->entries);
+  memset(self->entries, 0, capacity*(sizeof(HM_Entry)+element_size));
  return true;
 }
 
@@ -500,8 +510,8 @@ bool HM_grow(HM* self){
     HM_kwl_set(&new_hm, HM_key_at(self, i), *HM_key_len_at(self, i), HM_value_at(self, i));
   }
   HM_deinit(self);
-
-  memcpy(self, &new_hm, sizeof(*self));
+  
+  *self = new_hm;
   return true;
 }
 
