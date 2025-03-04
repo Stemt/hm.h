@@ -72,10 +72,10 @@ typedef struct{
   size_t key_len;
   size_t next;
   size_t prev;
+  unsigned char value[];
 } HM_Entry;
 
 typedef struct{
-  unsigned char* values;
   HM_Entry* entries;
   size_t first;
   size_t last;
@@ -231,6 +231,8 @@ HM_Iterator HM_kwl_find(HM* self, const void* key, size_t key_len);
  */
 HM_Iterator HM_iterate(HM* self, HM_Iterator current);
 
+void HM_swap_order(HM* self, HM_Iterator a_it, HM_Iterator b_it);
+
 /**
  * \brief         returns HM_Iterator to the first element
  * \param self:   hashmap handle
@@ -333,8 +335,31 @@ HM_Iterator HM_iterate(HM* self, HM_Iterator current){
   }
 }
 
+void HM_swap_order(HM* self, HM_Iterator a_it, HM_Iterator b_it){
+  HM_ASSERT(a_it != NULL);
+  HM_ASSERT(b_it != NULL);
+  
+  int a = *a_it;
+  int b = *b_it;
+
+  int a_prev = self->entries[a].prev;
+  int a_next = self->entries[a].next;
+  int b_prev = self->entries[b].prev;
+  int b_next = self->entries[b].next;
+
+  self->entries[a_prev].next = b; 
+  self->entries[a].prev = b_prev;
+  self->entries[a].next = b_next;
+  self->entries[a_next].prev = b;
+  
+  self->entries[b_next].prev = a;
+  self->entries[b].prev = a_prev;
+  self->entries[b].next = a_next;
+  self->entries[b_prev].next = a; 
+}
+
 bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value){
-  if(self->count > self->capacity/2){
+  if(self->count >= self->capacity>>1){
     if(!HM_grow(self)) return false;
   }
 
@@ -366,7 +391,7 @@ bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value){
     HM_ASSERT(memcmp(self->entries[i].key, key, key_len) == 0);
   }
   
-  memcpy(self->values + i * self->element_size, value, self->element_size);
+  memcpy(self->entries[i].value, value, self->element_size);
 
   self->count++;
   return true;
@@ -388,9 +413,8 @@ const size_t* HM_key_len_at(HM* self, HM_Iterator it){
 
 void* HM_value_at(HM* self, HM_Iterator it){
   if(it == NULL) return NULL;
-  return self->values + (*it) * self->element_size;
+  return self->entries[*it].value;
 }
-
 
 HM_Iterator HM_kwl_find(HM* self, const void* key, size_t key_len){
   size_t hash = self->hash_func((const char*)key, key_len) % self->capacity;
@@ -454,15 +478,9 @@ bool HM_allocate(HM* self, size_t element_size, size_t capacity){
   self->capacity = capacity;
   self->element_size = element_size;
   
-  self->entries = (HM_Entry*)HM_CALLOC(capacity, sizeof(HM_Entry));
+  self->entries = (HM_Entry*)HM_CALLOC(capacity, sizeof(HM_Entry)+element_size);
   HM_CHECK_ALLOC(self->entries);
-
-  self->values = (unsigned char*)HM_CALLOC(capacity, element_size);
-  HM_CHECK_ALLOC(self->values, 
-    HM_FREE(self->entries);
-  );
-
-  return true;
+ return true;
 }
 
 bool HM_grow(HM* self){
@@ -497,7 +515,6 @@ void HM_deinit(HM* self){
     HM_FREE((void*)HM_key_at(self, i));
   }
   HM_FREE(self->entries);
-  HM_FREE(self->values);
 }
 
 HM* HM_new(size_t element_size, size_t capacity){
