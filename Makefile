@@ -7,8 +7,6 @@ test: tests/test.c hm.h
 	gcc -ggdb -Wall -Wextra -o test_app tests/test.c -I.
 	./test_app
 
-bench_app: tests/bench.c hm.h
-	gcc -ggdb -Wall -Wextra -o bench_app tests/bench.c -I.
-
-bench: bench_app
-	./bench_app
+clean:
+	rm -f example_app
+	rm -f test_app
