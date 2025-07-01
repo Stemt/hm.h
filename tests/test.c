@@ -43,6 +43,22 @@ UTEST(HM_Basic, resize){
   ASSERT_GE(hm.capacity, 3ULL);
 }
 
+UTEST(HM_Basic, reinsertion){
+  HM hm = {0};
+  ASSERT_TRUE(HM_int_init(&hm, 2));
+  ASSERT_EQ(hm.capacity, 2ULL);
+
+  ASSERT_TRUE(HM_int_set(&hm, "key-1", 1));
+  ASSERT_TRUE(HM_int_set(&hm, "key-2", 2));
+  ASSERT_TRUE(HM_int_set(&hm, "key-3", 3));
+  ASSERT_EQ(hm.count, 3ULL);
+  
+  ASSERT_TRUE(HM_int_set(&hm, "key-1", 1));
+  ASSERT_TRUE(HM_int_set(&hm, "key-2", 2));
+  ASSERT_TRUE(HM_int_set(&hm, "key-3", 3));
+  ASSERT_EQ(hm.count, 3ULL);
+}
+
 UTEST(HM_Basic_key_with_length, insertion){
   HM hm = {0};
   ASSERT_TRUE(HM_init(&hm, sizeof(int), 0));

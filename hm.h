@@ -394,6 +394,7 @@ bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value){
     entry->key_len = key_len;
     HM_CHECK_ALLOC(entry->key);
     memcpy(entry->key, key, key_len);
+    self->count++;
   }else{
     HM_ASSERT(entry->key_len == key_len);
     HM_ASSERT(memcmp(entry->key, key, key_len) == 0);
@@ -401,7 +402,6 @@ bool HM_kwl_set(HM* self, const void* key, size_t key_len, void* value){
   
   memcpy(entry->value, value, self->element_size);
 
-  self->count++;
   return true;
 }
 
